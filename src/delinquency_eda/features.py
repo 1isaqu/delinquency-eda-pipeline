@@ -162,11 +162,74 @@ def with_bands(df: pd.DataFrame, settings: Settings) -> pd.DataFrame:
 
 
 def _banded(source: pd.Series, labels: list[str], assigned: list[str | None]) -> pd.Series:
-    return pd.Series(
-        pd.Categorical(assigned, categories=labels, ordered=True), index=source.index
-    )
+    return pd.Series(pd.Categorical(assigned, categories=labels, ordered=True), index=source.index)
 
 
 def is_unpaid(df: pd.DataFrame) -> pd.Series:
     """Rows in the overdue-unpaid bucket."""
     return df["bucket"] == OVERDUE_UNPAID
+
+
+def mature_mask(df: pd.DataFrame, grace_days: int) -> pd.Series:
+    """Rows whose outcome is final. Same rule as ``derive.is_mature``, evaluated on the column.
+
+    ``days_overdue`` was computed against the dataset's reference date, so the mask depends on the
+    due date alone, never on the outcome.
+    """
+    return df["days_overdue"] > grace_days
+
+
+# Measured after the agreement, so they must never feed a model that predicts the outcome. They
+# are kept in the cleaned table for audit (``paid_amount`` is what proves the outcome).
+LEAKAGE_COLUMNS = ("paid_amount", "paid_date", "days_overdue", "status_id", "status_label")
+# Describe what happened between agreement and due date. Useful for explanation, but outreach
+# targets people who are already slipping, so using them to predict non-payment confuses cause
+# and effect.
+EXPLANATORY_ONLY_COLUMNS = (
+    "contacts_total",
+    "contacts_after",
+    "answered_after",
+    "cpc_after",
+    "followup_level",
+)
+
+REPEAT_NONE = "First time - no earlier break"
+
+
+def repeat_level(prior_breaks: int, chronic_threshold: int) -> str:
+    """Repeat-break group of one agreement: none, a few, or chronic."""
+    if prior_breaks <= 0:
+        return REPEAT_NONE
+    if prior_breaks >= chronic_threshold:
+        return f"Chronic - {chronic_threshold}+ earlier breaks"
+    return f"Repeat - {prior_breaks} earlier break{'' if prior_breaks == 1 else 's'}"
+
+
+RATIO_STATE_LABELS = {
+    RATIO_ZERO: "(zero balance - ratio undefined)",
+    RATIO_NO_LINK: "(no debt link - ratio unknown)",
+    RATIO_NEGATIVE: "(negative balance)",
+}
+
+
+def ratio_group(df: pd.DataFrame) -> pd.Series:
+    """Ratio band where the ratio is defined, otherwise the reason it is not."""
+    labels = df["ratio_band"].astype(object)
+    reason = df["ratio_state"].map(RATIO_STATE_LABELS)
+    return labels.where(df["ratio_state"] == RATIO_OK, reason)
+
+
+def analysis_frame(dataset: Dataset, settings: Settings) -> pd.DataFrame:
+    """The base table plus everything the offline stages share.
+
+    Adds follow-up and repeat-break columns, bands, the portfolio group and the maturity flag. The
+    maturity cut uses the grace period the dataset was built with, because that is what produced
+    its ``bucket`` column.
+    """
+    df = with_bands(enrich(dataset, settings), settings)
+    df["portfolio_group"] = [
+        portfolio_group(v if isinstance(v, str) else None, settings.portfolio_group_pattern)
+        for v in df["portfolio_label"]
+    ]
+    df["is_mature"] = mature_mask(df, dataset.meta.grace_days)
+    return df

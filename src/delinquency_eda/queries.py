@@ -45,9 +45,7 @@ def _excluded_agents(alias: str, patterns: Sequence[str]) -> tuple[str, list[str
     params: list[str] = []
     for pattern in patterns:
         for column in ("login", "display_name"):
-            clauses.append(
-                f"AND COALESCE(LOWER(LTRIM(RTRIM({alias}.{column}))), '') NOT LIKE ?"
-            )
+            clauses.append(f"AND COALESCE(LOWER(LTRIM(RTRIM({alias}.{column}))), '') NOT LIKE ?")
             params.append(pattern.lower())
     return "\n      ".join(clauses), params
 
@@ -125,8 +123,10 @@ totals AS (
         "s.paid_amount",
         "s.paid_at AS paid_date",
     ]
-    joins = ["LEFT JOIN totals AS tt ON tt.agreement_id = s.agreement_id "
-             "AND tt.portfolio_id = s.portfolio_id"]
+    joins = [
+        "LEFT JOIN totals AS tt ON tt.agreement_id = s.agreement_id "
+        "AND tt.portfolio_id = s.portfolio_id"
+    ]
 
     if detail:
         debt_totals = f""",
@@ -159,9 +159,7 @@ debt_totals AS (
     sql = (
         f"{ctes}\n"
         f"SELECT {', '.join(select)}\n"
-        "FROM selected AS s\n"
-        + "\n".join(joins)
-        + "\nORDER BY s.agreement_id, s.portfolio_id"
+        "FROM selected AS s\n" + "\n".join(joins) + "\nORDER BY s.agreement_id, s.portfolio_id"
     )
     params = (
         dialect.bind_date(date_from),
@@ -236,3 +234,13 @@ FROM ranked AS b
 LEFT JOIN {t("agreement_statuses", "st", schema)} ON st.status_id = b.status_id
 WHERE b.rn = 1"""
     return Query(sql, (*settings.broken_status_labels, *debtor_ids))
+
+
+def build_status_query(dialect: Dialect, schema: str | None = None) -> Query:
+    """The status catalogue, used by the schema check to confirm configured labels exist."""
+    sql = (
+        "SELECT s.status_id, s.label\n"
+        f"FROM {dialect.table('agreement_statuses', 's', schema)}\n"
+        "ORDER BY s.status_id"
+    )
+    return Query(sql, ())
