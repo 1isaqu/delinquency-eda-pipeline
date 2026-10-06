@@ -30,7 +30,7 @@ class ModelSettings:
     boosting_learning_rate: float = 0.06
     min_category_count: int = 20
     holdout_quantile: float = 0.75
-    permutation_repeats: int = 20
+    permutation_repeats: int = 10
 
     def validate(self) -> None:
         if self.folds < 2:
@@ -75,6 +75,7 @@ class Settings:
     min_n_weak: int = 10
     chronic_break_threshold: int = 4
     mnar_gap_pp: float = 10.0
+    stability_range_pp: float = 10.0
     rare_category_min_n: int = 25
     outlier_iqr_k: float = 3.0
     portfolio_group_pattern: str = r"[\s-]+(?:[IVXLCDM]+|\d+)$"
@@ -105,6 +106,8 @@ class Settings:
             raise ConfigError("id_chunk_size must be between 1 and 1000 (driver parameter limits)")
         if self.min_n_weak > self.min_n_reliable:
             raise ConfigError("min_n_weak must not exceed min_n_reliable")
+        if self.mnar_gap_pp < 0 or self.stability_range_pp < 0:
+            raise ConfigError("mnar_gap_pp and stability_range_pp must not be negative")
         if self.chronic_break_threshold < 2:
             raise ConfigError("chronic_break_threshold must be at least 2")
         for name, kind in (

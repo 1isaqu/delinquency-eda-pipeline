@@ -11,29 +11,7 @@ from __future__ import annotations
 import sqlite3
 from pathlib import Path
 
-DDL = """
-CREATE TABLE agreement_statuses (status_id INTEGER PRIMARY KEY, label TEXT NOT NULL);
-CREATE TABLE agents (agent_id TEXT PRIMARY KEY, display_name TEXT, login TEXT NOT NULL);
-CREATE TABLE debts (
-    debt_id INTEGER PRIMARY KEY, portfolio_id INTEGER, contract_no TEXT, balance REAL,
-    due_at TEXT, days_overdue INTEGER
-);
-CREATE TABLE debt_attributes (debt_id INTEGER PRIMARY KEY, portfolio_label TEXT);
-CREATE TABLE agreement_debts (agreement_id INTEGER, portfolio_id INTEGER, debt_id INTEGER);
-CREATE TABLE debtors (debtor_id INTEGER PRIMARY KEY, person_key TEXT);
-CREATE TABLE agreements (
-    row_id INTEGER PRIMARY KEY, agreement_id INTEGER, portfolio_id INTEGER, debtor_id INTEGER,
-    installment_no INTEGER, amount REAL, plan_installments INTEGER, paid_amount REAL,
-    issued_at TEXT, due_at TEXT, paid_at TEXT, status_id INTEGER, agent_id TEXT
-);
-CREATE TABLE contact_results (
-    result_id INTEGER PRIMARY KEY, label TEXT NOT NULL, answered INTEGER, right_party INTEGER
-);
-CREATE TABLE contact_events (
-    event_id INTEGER PRIMARY KEY, debtor_id INTEGER, result_id INTEGER, agent_id TEXT,
-    occurred_at TEXT
-);
-"""
+from demo_loader import DDL
 
 STATUS_NAMES = (
     "ACTIVE",

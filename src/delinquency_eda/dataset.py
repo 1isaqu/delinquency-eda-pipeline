@@ -295,9 +295,7 @@ def build_dataset(
     keys = sorted({r["person_key"] for r in base if r["person_key"]})
     own_ids: dict[str, set[Any]] = {
         line: {
-            r["debtor_id"]
-            for r in base
-            if r["product_line"] == line and r["debtor_id"] is not None
+            r["debtor_id"] for r in base if r["product_line"] == line and r["debtor_id"] is not None
         }
         for line in databases
     }

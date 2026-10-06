@@ -28,7 +28,7 @@ from delinquency_eda.queries import (
     build_slip_query,
 )
 
-from world import make_second_line, make_world
+from world import make_world
 
 START, END, AS_OF = date(2026, 3, 1), date(2026, 3, 31), date(2026, 3, 31)
 SETTINGS = Settings(grace_days=3)
@@ -123,19 +123,6 @@ def test_schema_qualifies_every_table():
 
 
 # ---- extraction against SQLite -------------------------------------------------------------
-
-
-@pytest.fixture
-def world(tmp_path):
-    return make_world(tmp_path / "auto.db")
-
-
-@pytest.fixture
-def two_lines(tmp_path):
-    return {
-        "auto": SQLiteDatabase.open(make_world(tmp_path / "auto.db")),
-        "consumer": SQLiteDatabase.open(make_second_line(tmp_path / "consumer.db")),
-    }
 
 
 def slips(world, **kwargs):

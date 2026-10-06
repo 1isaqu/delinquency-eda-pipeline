@@ -1,0 +1,32 @@
+{
+  "grace_days": 3,
+  "generated_status_labels": ["ACTIVE", "BROKEN", "PAID", "AUTO_BROKEN", "PAID_MANUAL"],
+  "broken_status_labels": ["BROKEN", "AUTO_BROKEN"],
+  "manual_break_label": "BROKEN",
+  "excluded_agent_patterns": ["system%", "test%"],
+  "system_agents": ["batch_loader"],
+  "term_band_edges": [0, 2, 5, 10, 20],
+  "value_band_edges": [100, 500, 2000, 10000],
+  "ratio_band_edges": [0.05, 0.2, 0.5],
+  "installment_band_edges": [1, 3, 6, 12, 24],
+  "min_n_reliable": 30,
+  "min_n_weak": 10,
+  "chronic_break_threshold": 4,
+  "mnar_gap_pp": 10.0,
+  "stability_range_pp": 10.0,
+  "rare_category_min_n": 25,
+  "outlier_iqr_k": 3.0,
+  "portfolio_group_pattern": "[\\s-]+(?:[IVXLCDM]+|\\d+)$",
+  "suspect_agent_pattern": "system|robot|bot|batch|auto|test|import",
+  "model": {
+    "folds": 5,
+    "random_state": 42,
+    "logistic_c": 1.0,
+    "logistic_max_iter": 2000,
+    "boosting_max_iter": 300,
+    "boosting_learning_rate": 0.06,
+    "min_category_count": 20,
+    "holdout_quantile": 0.75,
+    "permutation_repeats": 10
+  }
+}

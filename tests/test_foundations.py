@@ -103,9 +103,7 @@ def test_defaults_validate():
 
 
 def test_settings_from_mapping_overrides_and_converts_lists():
-    s = Settings.from_mapping(
-        {"grace_days": 7, "term_band_edges": [1, 4], "model": {"folds": 3}}
-    )
+    s = Settings.from_mapping({"grace_days": 7, "term_band_edges": [1, 4], "model": {"folds": 3}})
     assert s.grace_days == 7
     assert s.term_band_edges == (1, 4)
     assert s.model.folds == 3
