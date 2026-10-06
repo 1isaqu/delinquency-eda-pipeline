@@ -1,7 +1,7 @@
-"""Date and number normalisation for values that come out of different database drivers.
+"""Date and number normalization for values that come out of different database drivers.
 
 SQL Server drivers return ``datetime`` objects, SQLite returns text. Everything that enters a
-dataset is normalised here so the rest of the pipeline only ever sees ISO ``YYYY-MM-DD`` strings
+dataset is normalized here so the rest of the pipeline only ever sees ISO ``YYYY-MM-DD`` strings
 and plain floats.
 """
 

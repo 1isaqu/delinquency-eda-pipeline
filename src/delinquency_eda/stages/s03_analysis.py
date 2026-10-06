@@ -1,7 +1,7 @@
 """Stage 03 - factor analysis over the overdue-unpaid bucket.
 
-For each candidate factor (agent, portfolio, product line, follow-up, repeat breaks, instalment
-ratio, value, term, instalment count) two tables are produced:
+For each candidate factor (agent, portfolio, product line, follow-up, repeat breaks, installment
+ratio, value, term, installment count) two tables are produced:
 
 * **concentration** over every overdue-unpaid slip: who holds the unpaid value?
 * **discrimination** over the *mature* cohort only: does the group fail more or less often than
@@ -10,7 +10,7 @@ ratio, value, term, instalment count) two tables are produced:
 Concentration says where the money is; only discrimination says whether a factor separates payers
 from non-payers. A factor can top the concentration table simply because it is big. The mature
 cohort is used for rates because a slip still inside its grace window is censored: it can still be
-paid on time, so counting it as a failure measures recency, not behaviour.
+paid on time, so counting it as a failure measures recency, not behavior.
 
 The follow-up factor is descriptive only. Outreach is aimed at people who are already slipping, so
 follow-up and non-payment are entangled by reverse causality, and a higher unpaid rate among
@@ -147,7 +147,7 @@ class AnalysisResult:
     tables: dict[str, FactorTables]
 
 
-def analyse(df: pd.DataFrame, settings: Settings) -> AnalysisResult:
+def analyze(df: pd.DataFrame, settings: Settings) -> AnalysisResult:
     """Both tables for every factor. ``df`` comes from ``features.analysis_frame``."""
     unpaid = df[df["bucket"] == OVERDUE_UNPAID]
     mature = df[df["is_mature"]]
@@ -348,7 +348,7 @@ def run(ctx: Context, args: argparse.Namespace) -> int:
     del args
     dataset = ctx.load_dataset()
     df = F.analysis_frame(dataset, ctx.settings)
-    result = analyse(df, ctx.settings)
+    result = analyze(df, ctx.settings)
     ctx.say(
         f"slips={len(df)} overdue_unpaid={result.unpaid_slips} mature={result.mature_slips} "
         f"baseline={fmt_rate(result.baseline)}"

@@ -119,7 +119,7 @@ def test_analysis_puts_the_pseudo_agent_at_the_top_of_the_unpaid_rate(workspace)
     from delinquency_eda import features
 
     frame = features.analysis_frame(ds, Settings())
-    result = s03_analysis.analyse(frame, Settings())
+    result = s03_analysis.analyze(frame, Settings())
     agents = result.tables["agent"].discrimination
     top = agents.iloc[0]
     assert top["group"] == "ldr" and top["rate"] == 1.0

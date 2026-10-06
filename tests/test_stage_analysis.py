@@ -6,7 +6,7 @@ import pytest
 
 from delinquency_eda import features as F
 from delinquency_eda.config import Settings
-from delinquency_eda.stages.s03_analysis import FACTORS, SECTIONS, analyse, render
+from delinquency_eda.stages.s03_analysis import FACTORS, SECTIONS, analyze, render
 
 from clirun import run_cli
 from frames import dataset, paid_on_time, raw
@@ -31,7 +31,7 @@ def frame():
 
 
 def test_baseline_uses_only_the_mature_cohort(frame):
-    result = analyse(frame, SETTINGS)
+    result = analyze(frame, SETTINGS)
     # mature rows: 1 (paid), 2 and 3 (unpaid). Row 4 is censored, row 5 is not due.
     assert result.mature_slips == 3
     assert result.definitive_unpaid == 2
@@ -41,7 +41,7 @@ def test_baseline_uses_only_the_mature_cohort(frame):
 
 
 def test_concentration_covers_the_whole_bucket_discrimination_only_the_mature(frame):
-    tables = analyse(frame, SETTINGS).tables["agent"]
+    tables = analyze(frame, SETTINGS).tables["agent"]
     assert tables.concentration["slips"].sum() == 3
     assert tables.discrimination["mature"].sum() == 3
     by_agent = tables.discrimination.set_index("group")
@@ -50,14 +50,14 @@ def test_concentration_covers_the_whole_bucket_discrimination_only_the_mature(fr
 
 
 def test_every_factor_is_computed_and_every_factor_is_in_a_section(frame):
-    result = analyse(frame, SETTINGS)
+    result = analyze(frame, SETTINGS)
     assert set(result.tables) == set(FACTORS)
     assert {k for _, keys in SECTIONS for k in keys} == set(FACTORS)
 
 
 def test_the_report_states_what_each_table_is_and_that_it_is_observational(frame):
     ds = dataset(_rows())
-    text = render(frame, ds, analyse(frame, SETTINGS)).render()
+    text = render(frame, ds, analyze(frame, SETTINGS)).render()
     assert "Observational" in text
     assert "still inside the grace window" in text
     assert "whole-agreement value" in text
@@ -68,7 +68,7 @@ def test_the_report_states_what_each_table_is_and_that_it_is_observational(frame
 def test_a_zero_balance_gets_its_own_group_instead_of_the_missing_ones():
     rows = [raw(1, original_debt=0.0), raw(2, original_debt=None), raw(3, original_debt=1000.0)]
     frame = F.analysis_frame(dataset(rows), SETTINGS)
-    groups = analyse(frame, SETTINGS).tables["ratio"].concentration["group"].tolist()
+    groups = analyze(frame, SETTINGS).tables["ratio"].concentration["group"].tolist()
     assert "(zero balance - ratio undefined)" in groups
     assert "(no debt link - ratio unknown)" in groups
 

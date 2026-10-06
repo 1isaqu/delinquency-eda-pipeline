@@ -66,14 +66,14 @@ def test_the_by_line_table_counts_each_product_line(result):
     assert by_line.loc["consumer", "definitive"] == 1
 
 
-def test_the_report_summarises_old_due_dates_instead_of_listing_them_all():
+def test_the_report_summarizes_old_due_dates_instead_of_listing_them_all():
     rows = [raw(i, due_date=f"2026-02-{i:02d}") for i in range(1, 11)] + [
         raw(20, due_date="2026-03-29")
     ]
     ds = dataset(rows)
     text = render(measure(ds.base_frame(), 3), len(rows)).render()
     assert "older due date(s) are all definitive" in text
-    assert "2026-02-01" not in text  # summarised, not listed
+    assert "2026-02-01" not in text  # summarized, not listed
     assert "2026-03-29" in text
 
 

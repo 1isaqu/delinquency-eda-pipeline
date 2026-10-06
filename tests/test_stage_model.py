@@ -154,8 +154,8 @@ def test_a_fold_with_a_single_outcome_class_yields_nan_not_a_crash():
 
 def test_auc_summary_ignores_undefined_folds():
     assert math.isnan(M.safe_auc(np.array([1, 1, 1]), np.array([0.1, 0.2, 0.3])))
-    assert M.summarise([float("nan"), float("nan")])[2] == 0
-    assert M.summarise([0.6, float("nan"), 0.8]) == (pytest.approx(0.7), pytest.approx(0.1), 2)
+    assert M.summarize([float("nan"), float("nan")])[2] == 0
+    assert M.summarize([0.6, float("nan"), 0.8]) == (pytest.approx(0.7), pytest.approx(0.1), 2)
 
 
 def test_signal_share():
@@ -169,10 +169,10 @@ def test_signal_share():
 
 
 def test_the_model_finds_the_planted_term_effect_with_people_grouped(result):
-    logistic, _, valid = M.summarise(result.cv["Logistic (L2)"])
+    logistic, _, valid = M.summarize(result.cv["Logistic (L2)"])
     assert valid == SETTINGS.model.folds
     assert logistic > 0.65
-    assert M.summarise(result.term_only)[0] > 0.65
+    assert M.summarize(result.term_only)[0] > 0.65
 
 
 def test_odds_ratios_use_the_shortest_observed_band_as_the_reference(result):
@@ -243,7 +243,7 @@ def test_a_cohort_with_no_effect_gets_a_weak_model():
     outcome = M.fit_all(
         clean_frame(dataset(synthetic_rows(360, seed=11, effect=0.0)), SETTINGS), SETTINGS
     )
-    assert M.summarise(outcome.cv["Logistic (L2)"])[0] < 0.62
+    assert M.summarize(outcome.cv["Logistic (L2)"])[0] < 0.62
 
 
 # ---- the report ----------------------------------------------------------------------------
@@ -254,7 +254,7 @@ def test_the_report_states_the_exclusions_and_that_the_result_is_not_causal(resu
     for column in F.LEAKAGE_COLUMNS:
         assert f"`{column}`" in text
     assert "associations" in text
-    assert "randomised" in text
+    assert "randomized" in text
     assert "grouped by person" in text
     assert f"**{result.reference}** as the reference band" in text
 

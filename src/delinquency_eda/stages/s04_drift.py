@@ -11,7 +11,7 @@ and an agreement made after it did not exist either), then compared with the out
 * which value measure a headline number sums, when you give the figure you were shown.
 
 Limits, stated plainly: the dataset holds the latest status of each agreement, so a slip that was
-re-written, broken or cancelled after the reference date cannot be rewound, and slips that no
+re-written, broken or canceled after the reference date cannot be rewound, and slips that no
 longer pass the extraction filters are absent altogether.
 """
 

@@ -104,7 +104,7 @@ CONTEXT_DAYS = 7
 
 
 def _due_date_table(doc: Doc, result: CensoringResult) -> None:
-    """The recent due dates in full; everything older is definitive and summarised."""
+    """The recent due dates in full; everything older is definitive and summarized."""
     table = result.by_due_date
     recent = table[table["age"] <= result.grace_days + CONTEXT_DAYS]
     older = table[table["age"] > result.grace_days + CONTEXT_DAYS]

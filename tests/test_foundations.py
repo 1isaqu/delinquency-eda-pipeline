@@ -19,7 +19,7 @@ from delinquency_eda.sqlutil import chunked, ensure_read_only, placeholders
 # ---- bands ---------------------------------------------------------------------------------
 
 
-def test_int_bands_are_right_closed_and_labelled():
+def test_int_bands_are_right_closed_and_labeled():
     bands = Bands((0, 2, 5))
     assert bands.labels == ["<=0", "1-2", "3-5", ">5"]
     assert [bands.label(v) for v in (-3, 0, 1, 2, 3, 5, 6)] == [

@@ -88,7 +88,7 @@ def quality_checks(df: pd.DataFrame) -> list[Check]:
             "original_debt equals zero",
             debt.notna() & (debt == 0),
             HIGH,
-            "debt linked but balance zero: the instalment ratio divides by zero, it is not missing",
+            "linked debt with a zero balance: the ratio divides by zero; it is not missing",
         ),
         ("original_debt negative", debt < 0, HIGH, "negative balance"),
         (
@@ -518,7 +518,7 @@ def _outliers(doc: Doc, df: pd.DataFrame, settings: Settings) -> None:
     doc.table(top)
     doc.p(
         "Large values on long-tailed money columns are usually real. Check them against the "
-        "debt before treating them as errors; winsorise only for a model that is scale sensitive."
+        "debt before treating them as errors; winsorize only for a model that is scale sensitive."
     )
 
 

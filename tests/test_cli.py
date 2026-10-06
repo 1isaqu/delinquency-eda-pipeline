@@ -15,6 +15,7 @@ from delinquency_eda.cli import build_parser
 from delinquency_eda.stages import STAGES, by_command
 
 from clirun import run_cli, sqlite_args
+from frames import dataset, paid_on_time, raw
 
 SRC = str(Path(__file__).resolve().parents[1] / "src")
 
@@ -121,3 +122,40 @@ def test_the_package_runs_as_a_module():
     )  # fmt: skip
     assert done.returncode == 0
     assert done.stdout.strip() == f"delinquency-eda {__version__}"
+
+
+# ---- degenerate datasets -------------------------------------------------------------------
+
+OFFLINE = [
+    ["analysis"],
+    ["censoring"],
+    ["drift", "--reference-date", "2026-03-20"],
+    ["eda"],
+    ["diagnose"],
+    ["clean"],
+    ["card", "--from-dataset"],
+    ["model"],
+]
+
+
+@pytest.mark.parametrize("stage_args", OFFLINE, ids=lambda a: a[0])
+def test_every_offline_stage_reports_an_empty_dataset_as_an_error(stage_args, tmp_path, capsys):
+    path = dataset([]).save(tmp_path / "empty.json")
+    code, _ = run_cli(*stage_args, "--dataset", str(path), "--out-dir", str(tmp_path / "r"))
+    assert code == 2
+    assert "no rows" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize("stage_args", OFFLINE[:-1], ids=lambda a: a[0])
+def test_stages_cope_with_no_debtors_contacts_or_breaks(stage_args, tmp_path):
+    rows = [raw(1), paid_on_time(2), raw(3, person_key=None, due_date="2026-03-29")]
+    path = dataset(rows).save(tmp_path / "bare.json")
+    code, _ = run_cli(*stage_args, "--dataset", str(path), "--out-dir", str(tmp_path / "r"))
+    assert code == 0
+
+
+def test_a_single_slip_dataset_goes_through_the_descriptive_stages(tmp_path):
+    path = dataset([raw(1)]).save(tmp_path / "one.json")
+    for stage_args in (["analysis"], ["censoring"], ["eda"], ["diagnose"], ["clean"]):
+        code, _ = run_cli(*stage_args, "--dataset", str(path), "--out-dir", str(tmp_path / "r"))
+        assert code == 0, stage_args

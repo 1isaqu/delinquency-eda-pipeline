@@ -209,6 +209,8 @@ def add_arguments(parser: argparse.ArgumentParser) -> None:
 def run(ctx: Context, args: argparse.Namespace) -> int:
     as_of = args.as_of or date.today()
     windows = [parse_window(s) for s in args.window] or default_windows(as_of)
+    if len({w.name for w in windows}) != len(windows):
+        raise ConfigError("window names must be unique")
     reference = parse_reference(args.reference)
     span_from, span_to = min(w.start for w in windows), max(w.end for w in windows)
     slips: list[dict[str, Any]] = []

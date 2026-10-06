@@ -183,7 +183,7 @@ def _frame(rows: Sequence[dict[str, Any]], columns: list[str], numeric: Sequence
 
 
 # --------------------------------------------------------------------------------------------
-# Row normalisation
+# Row normalization
 # --------------------------------------------------------------------------------------------
 
 
@@ -249,7 +249,7 @@ def fetch_slips(
     as_of: date,
     detail: bool,
 ) -> list[dict[str, Any]]:
-    """Slips due in ``[date_from, date_to]`` for one product line, normalised and classified."""
+    """Slips due in ``[date_from, date_to]`` for one product line, normalized and classified."""
     query = build_slip_query(
         db.dialect, settings, date_from, date_to, detail=detail, schema=db.schema
     )

@@ -1,6 +1,6 @@
 """SQL builders for the extraction. Pure functions: text and parameters out, no database in.
 
-Rules every query follows (they are the pipeline's standard behaviour, not options):
+Rules every query follows (they are the pipeline's standard behavior, not options):
 
 * read only, and every table reference carries the dialect's non-blocking hint,
 * re-written installments are collapsed: the latest row per

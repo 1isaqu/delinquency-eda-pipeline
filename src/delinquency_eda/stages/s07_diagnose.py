@@ -29,7 +29,7 @@ from delinquency_eda.dataset import BASE_COLUMNS
 from delinquency_eda.derive import OVERDUE_UNPAID
 from delinquency_eda.report import Doc, fmt_int, fmt_money, fmt_rate
 from delinquency_eda.tables import unpaid_rate
-from delinquency_eda.textutil import normalise_text
+from delinquency_eda.textutil import normalize_text
 
 TEXT_COLUMNS = (
     "agent_id",
@@ -178,7 +178,7 @@ def form_variants(df: pd.DataFrame) -> dict[str, list[list[str]]]:
     for c in (c for c in NAME_COLUMNS if c in df.columns):
         groups: dict[str, list[str]] = {}
         for value in _text_values(df, c).unique():
-            groups.setdefault(normalise_text(value), []).append(value)
+            groups.setdefault(normalize_text(value), []).append(value)
         out[c] = [sorted(g) for g in groups.values() if len(g) > 1]
     return out
 

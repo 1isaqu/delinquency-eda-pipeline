@@ -9,7 +9,7 @@ import pytest
 from delinquency_eda import features as F
 from delinquency_eda.config import Settings
 from delinquency_eda.stages import s07_diagnose as D
-from delinquency_eda.textutil import normalise_text
+from delinquency_eda.textutil import normalize_text
 
 from clirun import run_cli
 from frames import dataset, paid_on_time, raw
@@ -21,10 +21,10 @@ def frame(rows, **kwargs):
     return F.analysis_frame(dataset(rows, **kwargs), SETTINGS)
 
 
-def test_text_normalisation_folds_case_accents_and_spacing():
-    assert normalise_text("  Bánk   A\tI ") == "bank a i"
-    assert normalise_text("Façade") == "facade"
-    assert normalise_text("Straße") == "strasse"
+def test_text_normalization_folds_case_accents_and_spacing():
+    assert normalize_text("  Bánk   A\tI ") == "bank a i"
+    assert normalize_text("Façade") == "facade"
+    assert normalize_text("Straße") == "strasse"
 
 
 def test_whitespace_and_control_characters_are_counted_per_column():

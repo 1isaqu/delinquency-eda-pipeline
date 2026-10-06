@@ -135,3 +135,14 @@ def test_cli_evaluates_windows_against_a_database(world, tmp_path):
 def test_cli_without_sources_is_a_configuration_error(tmp_path):
     code, _ = run_cli("period", "--out-dir", str(tmp_path), "--backend", "sqlite")
     assert code == 2
+
+
+def test_window_names_must_be_unique(world, tmp_path):
+    code, _ = run_cli(
+        *sqlite_args(("auto", world)),
+        "--out-dir", str(tmp_path / "r"),
+        "period",
+        "--window", "w=2026-03-01:2026-03-05",
+        "--window", "w=2026-03-06:2026-03-10",
+    )  # fmt: skip
+    assert code == 2

@@ -26,14 +26,21 @@ jobs:
         run: ruff check .
       - name: Test
         run: python -m pytest
-      - name: Quick start smoke test
+      - name: Quick start on the demo databases
+        env:
+          DEA_BACKEND: sqlite
+          DEA_SOURCES: auto=data/demo/auto.db,consumer=data/demo/consumer.db
+          DEA_CONFIG: examples/settings.example.json
         run: |
           python examples/build_demo_db.py data/demo
-          delinquency-eda --backend sqlite --source auto=data/demo/auto.db --source consumer=data/demo/consumer.db schema
-          delinquency-eda --backend sqlite --source auto=data/demo/auto.db --source consumer=data/demo/consumer.db base --from 2025-11-01 --to 2026-03-31 --as-of 2026-03-31
+          delinquency-eda schema
+          delinquency-eda period --as-of 2026-03-31
+          delinquency-eda base --from 2025-11-01 --to 2026-03-31 --as-of 2026-03-31
           delinquency-eda analysis
           delinquency-eda censoring
+          delinquency-eda drift --reference-date 2026-03-27
           delinquency-eda eda
           delinquency-eda diagnose
           delinquency-eda clean
+          delinquency-eda card --from-dataset
           delinquency-eda model

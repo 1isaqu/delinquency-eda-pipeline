@@ -22,8 +22,8 @@ coefficients, so every band is compared with the same reference); permutation im
 hold-out; and a counterfactual that rewrites only the term and keeps everything else.
 
 Read the result as an association measured under control, not as proof that changing the term
-changes behaviour: people who ask for a long term may already be the people who cannot pay. Only a
-randomised term would settle that. A modest AUC is expected and fine; the model is here to
+changes behavior: people who ask for a long term may already be the people who cannot pay. Only a
+randomized term would settle that. A modest AUC is expected and fine; the model is here to
 measure an effect, not to predict who pays.
 """
 
@@ -237,7 +237,7 @@ def grouped_auc(
     return scores
 
 
-def summarise(scores: list[float]) -> tuple[float, float, int]:
+def summarize(scores: list[float]) -> tuple[float, float, int]:
     """``(mean, standard deviation, folds that had a defined AUC)``."""
     valid = [s for s in scores if not np.isnan(s)]
     if not valid:
@@ -452,7 +452,7 @@ def signal_share(term_auc: float, best_auc: float) -> float:
 
 
 def _auc_cell(scores: list[float]) -> list[str]:
-    mean, sd, valid = summarise(scores)
+    mean, sd, valid = summarize(scores)
     folds = ", ".join("n/a" if np.isnan(s) else f"{s:.3f}" for s in scores)
     return ["n/a" if valid == 0 else f"**{mean:.3f}** +/- {sd:.3f}", folds]
 
@@ -482,13 +482,13 @@ def render(result: ModelResult, settings: Settings) -> Doc:
             "already be the people who cannot pay.",
             "A modest AUC is normal for collections data. The model measures an effect; it is "
             "not a scoring tool.",
-            "A randomised term (draw the term offered among eligible agreements, compare payment "
+            "A randomized term (draw the term offered among eligible agreements, compare payment "
             "at the end of the grace period) is the only design that would show cause.",
         ]
     )
     if r.convergence_warnings:
         doc.p(
-            f"Note: the optimiser raised {r.convergence_warnings} convergence warning(s); "
+            f"Note: the optimizer raised {r.convergence_warnings} convergence warning(s); "
             "raise `model.logistic_max_iter`."
         )
     return doc
@@ -499,8 +499,8 @@ def _predictive(doc: Doc, r: ModelResult, settings: Settings) -> None:
     rows = [[name, *_auc_cell(scores)] for name, scores in r.cv.items()]
     rows.append(["Term band only (baseline)", *_auc_cell(r.term_only)])
     doc.table(rows, ["model", "AUC (mean +/- sd)", "AUC per fold"])
-    best = max((summarise(s)[0] for s in r.cv.values()), default=float("nan"))
-    term = summarise(r.term_only)[0]
+    best = max((summarize(s)[0] for s in r.cv.values()), default=float("nan"))
+    term = summarize(r.term_only)[0]
     share = signal_share(term, best)
     if np.isnan(share):
         doc.p("The term-only share of the signal is not defined (no model beat chance).")
@@ -542,7 +542,7 @@ def _holdout(doc: Doc, r: ModelResult) -> None:
         doc.p(f"Not available: {r.holdout_note}.")
         return
     h = r.holdout
-    cv_boost = summarise(r.cv["Gradient boosting"])[0]
+    cv_boost = summarize(r.cv["Gradient boosting"])[0]
     gap = abs(h.auc - cv_boost)
     verdict = (
         "within 0.05 of each other: the relation looks stable over time"
@@ -602,8 +602,8 @@ def run(ctx: Context, args: argparse.Namespace) -> int:
     full = clean_frame(dataset, ctx.settings)
     result = fit_all(full, ctx.settings)
     for name, scores in result.cv.items():
-        mean, sd, valid = summarise(scores)
+        mean, sd, valid = summarize(scores)
         ctx.say(f"{name}: AUC {mean:.3f} +/- {sd:.3f} over {valid} fold(s)")
-    ctx.say(f"term only: AUC {summarise(result.term_only)[0]:.3f}")
+    ctx.say(f"term only: AUC {summarize(result.term_only)[0]:.3f}")
     ctx.write_report("model.md", render(result, ctx.settings))
     return 0

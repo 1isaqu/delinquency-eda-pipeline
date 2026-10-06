@@ -4,7 +4,7 @@ The diagnostics usually show that the data is structurally clean and semanticall
 are valid but cannot be used as they stand. So the rules add information and remove none.
 
     R1  ``is_system``      flag rows owned by listed system agents (flagged, never deleted)
-    R2  ``zero_balance``   flag a zero original debt; the instalment ratio stays NaN, no imputation
+    R2  ``zero_balance``   flag a zero original debt; the installment ratio stays NaN, no imputation
     R3  leakage columns    listed in the meta file, kept for audit, excluded from models
     R4  ``portfolio_group``  portfolio label without its sequence token (original kept)
     R5  ``agreement_key``  ``product_line|agreement_id|portfolio_id``, asserted unique
@@ -33,7 +33,7 @@ from delinquency_eda.dataset import BASE_COLUMNS, Dataset
 from delinquency_eda.errors import DatasetError
 from delinquency_eda.report import Doc, fmt_int, fmt_money, fmt_rate
 from delinquency_eda.tables import unpaid_rate
-from delinquency_eda.textutil import normalise_text
+from delinquency_eda.textutil import normalize_text
 
 KEY_COLUMNS = ["product_line", "agreement_id", "portfolio_id"]
 ADDED_COLUMNS = ("agreement_key", "is_system", "zero_balance", "group_key")
@@ -58,12 +58,12 @@ def split_group(df: pd.DataFrame) -> pd.Series:
 
 def system_flag(df: pd.DataFrame, system_agents: tuple[str, ...]) -> pd.Series:
     """True where the agent name or login is one of ``system_agents`` (form-insensitive)."""
-    listed = {normalise_text(a) for a in system_agents}
+    listed = {normalize_text(a) for a in system_agents}
     if not listed:
         return pd.Series(False, index=df.index)
 
     def hit(value: object) -> bool:
-        return isinstance(value, str) and normalise_text(value) in listed
+        return isinstance(value, str) and normalize_text(value) in listed
 
     return df["agent_name"].map(hit) | df["agent_login"].map(hit)
 
@@ -158,7 +158,7 @@ def render(summary: CleaningSummary) -> Doc:
             ["columns added", ", ".join(f"`{c}`" for c in s.added)],
             ["rows flagged `is_system`", f"{fmt_int(s.system_rows)} ({fmt_money(s.system_value)})"],
             ["rows flagged `zero_balance`", fmt_int(s.zero_balance_rows)],
-            ["instalment ratio undefined (NaN, not imputed)", fmt_int(s.ratio_undefined)],
+            ["installment ratio undefined (NaN, not imputed)", fmt_int(s.ratio_undefined)],
             ["leakage columns kept, marked in the meta file", len(F.LEAKAGE_COLUMNS)],
         ],
         ["item", "value"],
