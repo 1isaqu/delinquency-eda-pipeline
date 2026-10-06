@@ -325,7 +325,46 @@ def build_dataset(
             b = build_breaks_query(db.dialect, settings, part, db.schema)
             for r in db.query(b.sql, b.params):
                 dataset.breaks.append(_break(line, r))
+    sort_tables(dataset)
     return dataset
+
+
+def _id_key(value: Any) -> tuple[int, Any]:
+    """A sort key for ids that may be numbers, text or missing, without mixed-type comparisons."""
+    if value is None:
+        return (2, 0)
+    return (1, value) if isinstance(value, str) else (0, value)
+
+
+def sort_tables(dataset: Dataset) -> None:
+    """Put every table in a fixed order, so the file does not depend on the database's row order."""
+    rank = {line: i for i, line in enumerate(dataset.meta.product_lines)}
+    dataset.base.sort(
+        key=lambda r: (
+            rank[r["product_line"]],
+            _id_key(r["agreement_id"]),
+            _id_key(r["portfolio_id"]),
+            _id_key(r["record_id"]),
+        )
+    )
+    dataset.debtors.sort(key=lambda r: (rank[r["product_line"]], _id_key(r["debtor_id"])))
+    dataset.contacts.sort(
+        key=lambda r: (
+            rank[r["product_line"]],
+            _id_key(r["debtor_id"]),
+            r["contact_date"] or "",
+            _id_key(r["result_id"]),
+        )
+    )
+    dataset.breaks.sort(
+        key=lambda r: (
+            rank[r["product_line"]],
+            _id_key(r["debtor_id"]),
+            r["agreement_date"] or "",
+            _id_key(r["agreement_id"]),
+            _id_key(r["portfolio_id"]),
+        )
+    )
 
 
 def _contact(line: str, row: Mapping[str, Any]) -> dict[str, Any]:

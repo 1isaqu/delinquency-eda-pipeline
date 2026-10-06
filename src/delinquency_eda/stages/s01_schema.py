@@ -82,9 +82,9 @@ def check_database(db: Database, product_line: str, settings: Settings) -> LineS
     catalogue = next((t for t in tables if t.spec.name == "agreement_statuses"), None)
     if catalogue is not None and catalogue.ok:
         query = build_status_query(db.dialect, db.schema)
-        found = {str(r["label"]).strip().lower() for r in db.query(query.sql, query.params)}
+        found = {str(r["label"]).strip() for r in db.query(query.sql, query.params)}
         result.labels_checked = True
-        result.missing_labels = [x for x in configured_labels(settings) if x.lower() not in found]
+        result.missing_labels = [x for x in configured_labels(settings) if x not in found]
     return result
 
 

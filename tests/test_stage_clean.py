@@ -25,7 +25,7 @@ from delinquency_eda.stages.s08_clean import (
 from clirun import run_cli
 from frames import dataset, paid_on_time, raw
 
-SETTINGS = Settings(system_agents=("batch_loader", "Sistema Ágil"))
+SETTINGS = Settings(system_agents=("batch_loader", "Café Robot"))
 
 
 def _rows():
@@ -34,7 +34,7 @@ def _rows():
         raw(2, original_debt=0.0),  # a real zero balance
         raw(3, original_debt=None),  # no debt link
         raw(4, agent_login="Batch_Loader", agent_name="Loader 01"),  # listed system agent
-        raw(5, agent_name="  sistema agil ", agent_login="svc_5"),  # same name, other case/accents
+        raw(5, agent_name="  cafe robot ", agent_login="svc_5"),  # same name, other case/accents
         raw(6, person_key=None, debtor_id=60),  # no person key
         raw(7, person_key=None, debtor_id=70),  # another one: must not pool with row 6
     ]

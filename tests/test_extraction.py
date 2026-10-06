@@ -355,3 +355,37 @@ def test_zero_balance_is_not_the_same_as_no_link(tmp_path):
     frame = enrich(ds, SETTINGS)
     assert frame.loc[0, "original_debt"] == 0.0
     assert frame.loc[0, "ratio_state"] == RATIO_ZERO
+
+
+# ---- ordering ------------------------------------------------------------------------------
+
+
+class ReversedRows:
+    """A database wrapper that hands every result set back in reverse order."""
+
+    def __init__(self, inner):
+        self._inner = inner
+        self.dialect, self.schema = inner.dialect, inner.schema
+
+    def query(self, sql, params=()):
+        return list(reversed(self._inner.query(sql, params)))
+
+    def table_columns(self, table):
+        return self._inner.table_columns(table)
+
+    def close(self):
+        self._inner.close()
+
+
+def test_the_dataset_does_not_depend_on_the_order_rows_come_back_in(two_lines):
+    normal = build_dataset(two_lines, SETTINGS, date_from=START, date_to=END, as_of=AS_OF)
+    flipped = build_dataset(
+        {line: ReversedRows(db) for line, db in two_lines.items()},
+        SETTINGS,
+        date_from=START,
+        date_to=END,
+        as_of=AS_OF,
+    )
+    for table in ("base", "debtors", "contacts", "breaks"):
+        assert getattr(flipped, table) == getattr(normal, table), table
+    assert normal.contacts and normal.breaks and normal.debtors

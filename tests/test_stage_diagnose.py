@@ -23,7 +23,7 @@ def frame(rows, **kwargs):
 
 def test_text_normalisation_folds_case_accents_and_spacing():
     assert normalise_text("  Bánk   A\tI ") == "bank a i"
-    assert normalise_text("ÇÃO") == "cao"
+    assert normalise_text("Façade") == "facade"
     assert normalise_text("Straße") == "strasse"
 
 
