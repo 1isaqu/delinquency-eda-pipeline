@@ -125,7 +125,7 @@ def test_settings_reject_unknown_and_invalid_values():
         Settings.from_mapping({"portfolio_group_pattern": "("})
     with pytest.raises(ConfigError, match="min_n_weak"):
         Settings.from_mapping({"min_n_weak": 50, "min_n_reliable": 10})
-    with pytest.raises(ConfigError, match="model.folds"):
+    with pytest.raises(ConfigError, match=r"model\.folds"):
         Settings.from_mapping({"model": {"folds": 1}})
 
 

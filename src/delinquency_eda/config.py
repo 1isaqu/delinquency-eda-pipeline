@@ -152,7 +152,8 @@ class Settings:
         try:
             raw = json.loads(target.read_text(encoding="utf-8"))
         except OSError as exc:
-            raise ConfigError(f"cannot read settings file {target}: {exc.strerror or exc}") from None
+            reason = exc.strerror or exc
+            raise ConfigError(f"cannot read settings file {target}: {reason}") from None
         except json.JSONDecodeError as exc:
             raise ConfigError(f"settings file {target} is not valid JSON: {exc}") from None
         if not isinstance(raw, dict):

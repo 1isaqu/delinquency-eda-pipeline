@@ -1,4 +1,4 @@
-"""A tiny Markdown builder. Every report-writing stage uses it, so tables look the same everywhere."""
+"""A tiny Markdown builder. Every report-writing stage uses it, so tables look alike."""
 
 from __future__ import annotations
 

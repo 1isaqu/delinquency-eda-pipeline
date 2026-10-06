@@ -45,3 +45,7 @@ src = ["src", "tests", "examples"]
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP", "SIM", "C4", "RUF"]
 ignore = ["RUF012"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["delinquency_eda"]
+known-local-folder = ["world", "frames", "demo_loader"]

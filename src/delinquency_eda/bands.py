@@ -11,6 +11,7 @@ import math
 from bisect import bisect_left
 from collections.abc import Iterable
 from dataclasses import dataclass
+from itertools import pairwise
 from typing import Literal
 
 Kind = Literal["int", "money", "ratio"]
@@ -24,7 +25,7 @@ class Bands:
     def __post_init__(self) -> None:
         if not self.edges:
             raise ValueError("a band set needs at least one edge")
-        if any(b <= a for a, b in zip(self.edges, self.edges[1:], strict=False)):
+        if any(b <= a for a, b in pairwise(self.edges)):
             raise ValueError(f"band edges must be strictly increasing, got {self.edges}")
 
     @property
@@ -32,7 +33,7 @@ class Bands:
         """Band labels in ascending order."""
         e = self.edges
         out = [f"<={self._fmt(e[0])}"]
-        for lo, hi in zip(e, e[1:], strict=False):
+        for lo, hi in pairwise(e):
             out.append(self._between(lo, hi))
         out.append(f">{self._fmt(e[-1])}")
         return out
