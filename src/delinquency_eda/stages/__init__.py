@@ -41,6 +41,17 @@ STAGES: tuple[Stage, ...] = (
     Stage(
         5, "censoring", "s05_censoring", False, "Split the unpaid bucket into still-open and lost"
     ),
+    Stage(6, "eda", "s06_eda", False, "Exploratory report: profile, quality, leakage, outliers"),
+    Stage(7, "diagnose", "s07_diagnose", False, "Cleaning diagnostics, report only"),
+    Stage(8, "clean", "s08_clean", False, "Apply the additive cleaning rules and write the tables"),
+    Stage(9, "card", "s09_card", True, "Recompute the summary card with a maturity cut"),
+    Stage(
+        10,
+        "model",
+        "s10_term_model",
+        False,
+        "Days-to-pay model: effect of the term, mix controlled",
+    ),
 )
 
 
