@@ -14,7 +14,10 @@ stage doing something:
 * re-written installments, slips without a debt link, zero balances, repeat debtors, people who
   appear in both product lines, and ids that repeat across the two lines.
 
-Nothing here is calibrated on real data and the effect sizes mean nothing outside the demo.
+Every constant in this file (line sizes, ticket scales, zero-balance shares, the coefficients of
+the payment model) is an arbitrary value picked by hand so that each effect is visible in a few
+thousand rows. None is fitted to, or derived from, any dataset, and the effect sizes mean nothing
+outside the demo.
 """
 
 from __future__ import annotations
@@ -91,8 +94,8 @@ class LineSpec:
 
 
 LINES = (
-    LineSpec("auto", 20, 900, 1500.0, 0.06),
-    LineSpec("consumer", 30, 600, 150.0, 0.65),
+    LineSpec("auto", 20, 900, 800.0, 0.12),
+    LineSpec("consumer", 30, 600, 450.0, 0.23),
 )
 
 
@@ -268,7 +271,7 @@ class LineBuilder:
         """Decide payment for the first installment. Returns (paid_at, status)."""
         rng = self.rng
         ticket = max(first / self.spec.ticket_scale, 1e-3)
-        logit = -0.70 + 0.12 * term + 0.30 * min(prior, 3) - 0.15 * math.log10(ticket)
+        logit = -2.60 + 0.22 * term + 0.55 * math.log1p(prior) - 0.15 * math.log(ticket)
         unpaid = rng.random() < sigmoid(logit + agent["effect"])
         if agent["login"] == "batch_loader":
             unpaid = True
