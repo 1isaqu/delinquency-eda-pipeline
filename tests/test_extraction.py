@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from dataclasses import replace
 from datetime import date
 
 import pytest
@@ -19,6 +20,7 @@ from delinquency_eda.features import (
     RATIO_NO_LINK,
     RATIO_OK,
     RATIO_ZERO,
+    analysis_frame,
     enrich,
 )
 from delinquency_eda.queries import (
@@ -297,7 +299,7 @@ def test_ids_chunking_still_finds_everything(two_lines):
 @pytest.fixture
 def enriched(two_lines):
     ds = build_dataset(two_lines, SETTINGS, date_from=START, date_to=END, as_of=AS_OF)
-    frame = enrich(ds, SETTINGS)
+    frame = enrich(ds)
     return frame.set_index(["product_line", "agreement_id"])
 
 
@@ -327,6 +329,13 @@ def test_prior_breaks_pool_the_person_and_exclude_the_agreement_itself(enriched)
     assert enriched.loc[("consumer", 101)].prior_breaks == 2  # history is found across lines
 
 
+def test_the_manual_break_label_is_the_one_the_dataset_was_built_with(two_lines):
+    ds = build_dataset(two_lines, SETTINGS, date_from=START, date_to=END, as_of=AS_OF)
+    edited = replace(SETTINGS, manual_break_label="PAID")  # a settings file changed after `base`
+    frame = analysis_frame(ds, edited).set_index(["product_line", "agreement_id"])
+    assert frame.loc[("auto", 103)].prior_manual_breaks == 1
+
+
 def test_a_break_made_after_the_agreement_is_not_history(enriched):
     assert enriched.loc[("auto", 102)].prior_breaks == 0  # 93 was made on 03-20, 102 on 03-02
     assert enriched.loc[("auto", 108)].prior_breaks == 0  # its own break does not count
@@ -352,7 +361,7 @@ def test_zero_balance_is_not_the_same_as_no_link(tmp_path):
     con.close()
     with SQLiteDatabase.open(path) as db:
         ds = build_dataset({"auto": db}, SETTINGS, date_from=START, date_to=END, as_of=AS_OF)
-    frame = enrich(ds, SETTINGS)
+    frame = enrich(ds)
     assert frame.loc[0, "original_debt"] == 0.0
     assert frame.loc[0, "ratio_state"] == RATIO_ZERO
 

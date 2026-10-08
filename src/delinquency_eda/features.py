@@ -68,7 +68,7 @@ def portfolio_group(label: str | None, pattern: str) -> str:
     return stripped or str(label).strip()
 
 
-def enrich(dataset: Dataset, settings: Settings) -> pd.DataFrame:
+def enrich(dataset: Dataset) -> pd.DataFrame:
     """The base table plus follow-up, repeat-break and ratio columns.
 
     Debtors are linked by ``(product_line, debtor_id)`` and grouped into people by ``person_key``,
@@ -87,7 +87,7 @@ def enrich(dataset: Dataset, settings: Settings) -> pd.DataFrame:
     for b in dataset.breaks:
         breaks[(b["product_line"], b["debtor_id"])].append(b)
 
-    manual = settings.manual_break_label
+    manual = dataset.meta.manual_break_label
     out: dict[str, list[Any]] = {
         name: []
         for name in (
@@ -226,7 +226,7 @@ def analysis_frame(dataset: Dataset, settings: Settings) -> pd.DataFrame:
     maturity cut uses the grace period the dataset was built with, because that is what produced
     its ``bucket`` column.
     """
-    df = with_bands(enrich(dataset, settings), settings)
+    df = with_bands(enrich(dataset), settings)
     df["portfolio_group"] = [
         portfolio_group(v if isinstance(v, str) else None, settings.portfolio_group_pattern)
         for v in df["portfolio_label"]
