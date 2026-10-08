@@ -8,30 +8,30 @@ replay, a censoring check, an EDA report generator, cleaning diagnostics, additi
 corrected summary card and the model. Everything reads a documented, generic data contract, so you
 connect your own database and no data ships with the code.
 
-## What it does, and why it is interesting
+## What it does
 
-The care is in the statistics of a measurement that looks simple and is not:
+Most of the code is about counting the overdue-unpaid bucket correctly:
 
-- **Right-censoring.** "Overdue and not paid on time" counts slips that can still be paid on time,
-  so the bucket is inflated for the most recent due dates, which is the window a daily dashboard
-  shows. Stage 05 splits the bucket into *still open* and *definitive*; every unpaid rate used to compare
-  groups is computed on the *mature* cohort, selected by due date alone (never by outcome).
-- **Reproducibility.** Outcomes are derived in Python against an explicit `--as-of` date, never the
-  server clock. The same command with the same date writes the same dataset, byte for byte, and
-  stage 04 can replay the past from the dataset alone.
-- **Reconciliation.** Stage 00 finds the window that reproduces a card you were shown; stage 04
-  finds which slips moved since, and which value measure (first installment, whole agreement,
-  original debt) a headline figure actually sums.
-- **Leakage and reverse causality are structural.** Columns measured after the outcome are listed
-  and excluded from the model; follow-up counts are descriptive only, because outreach targets
-  people who are already slipping.
-- **Independence.** Rows of one person are not independent, so cross-validation is grouped by an
-  opaque person key and a temporal hold-out is the second check.
-- **Cleaning that only adds.** Flags, derived columns and a composite key; no row deleted, no cell
-  imputed, and the stage reports exactly that. A zero balance and a missing debt are different
-  things and stay different.
-- **Honest about cause.** The reports say they are associations and name the design (a randomized
-  term) that would show cause.
+- "Overdue and not paid on time" counts slips that can still be paid on time (right-censoring), so
+  the bucket is inflated for the most recent due dates, which is the window a daily dashboard
+  shows. Stage 05 splits the bucket into still open and definitive. Every unpaid rate used to
+  compare groups is computed on the mature cohort, selected by due date alone and never by outcome.
+- Outcomes are derived in Python against an explicit `--as-of` date, never the server clock. The
+  same command with the same date writes the same dataset, byte for byte, and stage 04 can replay
+  the past from the dataset alone.
+- Stage 00 finds the window that reproduces a card you were shown. Stage 04 finds which slips moved
+  since, and which value measure (first installment, whole agreement, original debt) a headline
+  figure actually sums.
+- Columns measured after the outcome are listed and excluded from the model (leakage). Follow-up
+  counts are descriptive only, because outreach targets people who are already slipping (reverse
+  causality).
+- Rows of one person are not independent, so cross-validation is grouped by an opaque person key
+  and a temporal hold-out is the second check.
+- Cleaning adds flags, derived columns and a composite key. It deletes no rows and imputes no
+  cells, and its report shows both counts. A zero balance and a missing debt are different things
+  and stay different.
+- The reports call their results associations and name the design that would show cause (a
+  randomized term).
 
 ## Architecture
 
@@ -62,12 +62,12 @@ databases) and needs no database server.
 
 ```bash
 python -m venv .venv
-. .venv/bin/activate            # Windows: .venv\Scripts\activate
+. .venv/bin/activate
 python -m pip install -e ".[dev]"
 
 python examples/build_demo_db.py data/demo
 
-export DEA_BACKEND=sqlite       # Windows PowerShell: $env:DEA_BACKEND = "sqlite"
+export DEA_BACKEND=sqlite
 export DEA_SOURCES=auto=data/demo/auto.db,consumer=data/demo/consumer.db
 export DEA_CONFIG=examples/settings.example.json
 
@@ -84,6 +84,14 @@ delinquency-eda card --from-dataset
 delinquency-eda model
 ```
 
+In PowerShell, activate with `.venv\Scripts\Activate.ps1` and replace the three `export` lines with:
+
+```powershell
+$env:DEA_BACKEND = "sqlite"
+$env:DEA_SOURCES = "auto=data/demo/auto.db,consumer=data/demo/consumer.db"
+$env:DEA_CONFIG = "examples/settings.example.json"
+```
+
 Reports are Markdown files under `reports/`; the dataset is `data/dataset.json`; both are
 gitignored. `delinquency-eda --help` lists the stages and `delinquency-eda <stage> --help` its
 options. Global options (`--dataset`, `--out-dir`, `--config`, `--backend`, `--source`,
@@ -92,8 +100,9 @@ seconds on the demo data) because of the gradient-boosting model and permutation
 
 The demo plants situations the stages should find: a term effect on payment, slips still inside
 their grace window, a pseudo-agent that passes the default exclusion patterns and never collects,
-re-written installments, repeat debtors, and ids that repeat across the two product lines. The
-effect sizes mean nothing outside the demo.
+re-written installments, repeat debtors, and ids that repeat across the two product lines. Every
+constant in the generator is an arbitrary hand-picked value, so the effect sizes mean nothing
+outside the demo.
 
 ## Connect your own data
 
@@ -129,12 +138,13 @@ effect sizes mean nothing outside the demo.
    ```
 
    Use a login that only has read permission. The pipeline also refuses any statement that is not a
-   single `SELECT` or `WITH ... SELECT`, but that guard is a seat belt, not a security boundary.
+   single `SELECT` or `WITH ... SELECT`. That guard catches mistakes in the pipeline's own SQL;
+   access control still has to come from a read-only login.
    The SQL Server path has not been run against a live server (see Limitations); the extraction
    SQL has been run end to end on SQLite.
 3. Run `delinquency-eda schema`. It lists every missing table and column, the types it found, and
    any configured status label absent from your catalogue.
-4. Copy `examples/settings.example.json`, **calibrate it on your own data**, and pass it with
+4. Copy `examples/settings.example.json`, calibrate it on your own data, and pass it with
    `--config`. Every threshold in it is an invented default (see below).
 5. Run `period` to find the window your existing dashboard uses, then `base` and the rest.
 
@@ -159,8 +169,8 @@ Connection settings come from environment variables only (a `.env`-style file ca
 | `DEA_DB_LOGIN_TIMEOUT` | `10` | seconds |
 | `DEA_DB_QUERY_TIMEOUT` | `120` | seconds |
 
-Rules and thresholds live in the JSON settings file. **Every default below is invented so the demo
-and the tests run. None is a recommendation; calibrate each on your own data.** Unknown keys are an
+Rules and thresholds live in the JSON settings file. Every default below is invented so the demo
+and the tests run. None is a recommendation; calibrate each on your own data. Unknown keys are an
 error, not silently ignored.
 
 | Setting | Default | Meaning |
@@ -258,28 +268,30 @@ stated reference; and say that all of it is observational.
 
 ## Limitations
 
-- **SQL Server is not exercised against a live server.** The SQL Server adapter and dialect are
-  tested through a fake DB-API connection and by inspecting the generated T-SQL (hints, top-one
-  lookup, bound dates, parameter order). The extraction SQL runs end to end only on SQLite.
-- **Python versions.** The suite was run locally on Python 3.14. The CI workflow is configured for
-  3.10, 3.12 and 3.14, and `requires-python` says 3.10; treat the others as unverified until the
-  workflow has run.
-- **Defaults are invented.** Grace period, bands, status labels, exclusion patterns and the
+- SQL Server is not exercised against a live server. The SQL Server adapter and dialect are tested
+  through a fake DB-API connection and by inspecting the generated T-SQL (hints, top-one lookup,
+  bound dates, parameter order). The extraction SQL runs end to end only on SQLite.
+- The suite was run locally on Python 3.14, and CI runs and passes on 3.10, 3.12 and 3.14.
+  `requires-python` says 3.10.
+- Every default setting is invented. Grace period, bands, status labels, exclusion patterns and the
   reliability floors are placeholders so the demo runs. They are not benchmarks.
-- **Demo numbers mean nothing.** The generator plants effects so each stage has something to find;
-  its effect sizes are not a finding about any real operation.
-- **Observational.** The model measures an association under control. Nothing here shows that
-  changing a term changes behavior, and the data has no field for why a slip was not paid.
-- **A modest AUC is normal** and the model is not a scoring tool.
-- **One snapshot.** The dataset holds the latest status of each agreement, so later breaks and
-  re-writes cannot be rewound by the drift stage.
-- **Scale.** Feature construction joins people, contacts and breaks in Python loops. A local check
-  built the features for 20,000 slips and 80,000 contacts in about a second; the model stage costs
-  far more, and nothing is tuned for millions of rows.
-- **Sensitive file.** `data/dataset.json` holds the opaque keys and agent identifiers your database
-  supplies. Keep it out of version control and treat it like the source data.
-- **Host noise.** On some Windows hosts without the `wmic` tool, joblib prints a harmless warning
-  about physical core detection during the model stage.
+- The demo generator is arbitrary too. Every constant in it (line sizes, ticket scales, zero-balance
+  shares, payment-model coefficients) is a hand-picked value, not fitted to or derived from any
+  dataset. It plants effects so each stage has something to find, and their sizes are not a finding
+  about any real operation.
+- The model measures an association under control. Nothing here shows that changing a term changes
+  behavior, and the data has no field for why a slip was not paid.
+- A modest AUC does not argue against a real term effect. The model measures an effect; it is not a
+  scoring tool.
+- The dataset holds the latest status of each agreement, so later breaks and re-writes cannot be
+  rewound by the drift stage.
+- Feature construction joins people, contacts and breaks in Python loops. A local check built the
+  features for 20,000 slips and 80,000 contacts in about a second; the model stage costs far more,
+  and nothing is tuned for millions of rows.
+- `data/dataset.json` holds the opaque keys and agent identifiers your database supplies. Keep it
+  out of version control and treat it like the source data.
+- On some Windows hosts without the `wmic` tool, joblib prints a harmless warning about physical
+  core detection during the model stage.
 
 This is an independent portfolio project. It is not affiliated with any company and contains no
 real data.
