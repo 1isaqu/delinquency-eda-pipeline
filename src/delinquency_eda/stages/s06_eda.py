@@ -6,8 +6,10 @@ and target leakage), cardinality, referential integrity, time coverage, correlat
 outcome, outliers, findings and recommendations.
 
 Nothing in the narrative is typed in advance. Every finding is a sentence built from numbers
-computed on the dataset at hand, and a recommendation only appears when its trigger fired. The
-report never prints example values from a column, so it carries no row-level content.
+computed on the dataset at hand, and each row of the recommendation table appears only when a
+check on that dataset fired. One sentence of fixed advice (keep post-outcome columns out of a
+model) sits below the table because it holds for any data in the contract. The report never prints
+example values from a column, so it carries no row-level content.
 
 Rates use the mature cohort (outcome final); see stage 05 for why.
 """
@@ -517,9 +519,19 @@ def _outliers(doc: Doc, df: pd.DataFrame, settings: Settings) -> None:
     doc.p("The five largest first installments (no identifiers shown):")
     doc.table(top)
     doc.p(
-        "Large values on long-tailed money columns are usually real. Check them against the "
-        "debt before treating them as errors; winsorize only for a model that is scale sensitive."
+        "A large value in a long-tailed money column is not an error by itself. Check it against "
+        "the debt before treating it as one; winsorize only for a model that is scale sensitive."
     )
+
+
+def _long_tailed(df: pd.DataFrame, columns: tuple[str, ...]) -> list[str]:
+    """The columns, among those present, whose right tail is long (skewness above 2)."""
+    return [c for c in columns if c in df.columns and df[c].skew() > 2]
+
+
+def _repeated_people(df: pd.DataFrame) -> int:
+    keyed = df[df["person_key"].notna()]
+    return int((keyed.groupby("person_key").size() > 1).sum())
 
 
 def _findings(df: pd.DataFrame, checks: list[Check], settings: Settings) -> list[str]:
@@ -535,14 +547,12 @@ def _findings(df: pd.DataFrame, checks: list[Check], settings: Settings) -> list
         "The payment amount's presence classifies the mature outcome "
         f"{fmt_rate(nullness_accuracy(mature))} of the time: it leaks the target."
     )
-    skewed = [c for c in MONEY if c in df.columns and df[c].skew() > 2]
+    skewed = _long_tailed(df, MONEY)
     if skewed:
         out.append(
             "Money columns with a long right tail: " + ", ".join(f"`{c}`" for c in skewed) + "."
         )
-    keyed = df[df["person_key"].notna()]
-    repeated = int((keyed.groupby("person_key").size() > 1).sum())
-    out.append(f"{repeated} people appear on more than one slip.")
+    out.append(f"{_repeated_people(df)} people appear on more than one slip.")
     corr = correlations(mature)
     usable = corr[~corr["leaks"] & corr["spearman"].notna()]
     if len(usable):
@@ -558,7 +568,10 @@ def _findings(df: pd.DataFrame, checks: list[Check], settings: Settings) -> list
     return out
 
 
-def _recommendations(doc: Doc, df: pd.DataFrame, checks: list[Check], settings: Settings) -> None:
+def recommendations(
+    df: pd.DataFrame, checks: list[Check], settings: Settings
+) -> list[tuple[str, str]]:
+    """The (data, action) pairs whose trigger fired on this dataset."""
     by_name = {c.name: c for c in checks}
     rules = [
         (
@@ -567,17 +580,12 @@ def _recommendations(doc: Doc, df: pd.DataFrame, checks: list[Check], settings: 
             "flag it and keep it as its own category; do not impute or drop",
         ),
         (
-            True,
-            "payment amount and date, days overdue, status",
-            "exclude from any predictive model (they are measured after the outcome)",
-        ),
-        (
             by_name["portfolio_label missing"].rows > 0,
             "missing portfolio label",
             "use an explicit '(no portfolio)' category",
         ),
         (
-            any(df[c].skew() > 2 for c in MONEY if c in df.columns),
+            bool(_long_tailed(df, MONEY)),
             "long-tailed money columns",
             "log1p before a linear model; trees do not need it",
         ),
@@ -587,19 +595,35 @@ def _recommendations(doc: Doc, df: pd.DataFrame, checks: list[Check], settings: 
             "group the tail (portfolio group, not 'other'); show n and a sample-size flag",
         ),
         (
-            True,
-            "term (days to first due date)",
-            "bin it; the signal is in the bands, not the raw number",
+            bool(_long_tailed(df, ("days_to_due",))),
+            "term (days to first due date) with a long right tail",
+            "bin it or use log1p, so a few long terms do not dominate a linear fit",
         ),
-        (True, "split", "group by person or split by time, never a random row split"),
+        (
+            _repeated_people(df) > 0,
+            "people with more than one slip",
+            "group by person or split by time, never a random row split",
+        ),
         (
             df["product_line"].nunique() > 1,
             "product lines",
             "model them separately or interact with them: their populations differ",
         ),
     ]
-    fired = [(what, action) for ok, what, action in rules if ok]
-    doc.table(fired, ["data", "action"])
+    return [(what, action) for ok, what, action in rules if ok]
+
+
+def _recommendations(doc: Doc, df: pd.DataFrame, checks: list[Check], settings: Settings) -> None:
+    fired = recommendations(df, checks, settings)
+    if fired:
+        doc.table(fired, ["data", "action"])
+    else:
+        doc.p("No check fired a recommendation on this dataset.")
+    doc.p(
+        "Fixed advice, true for any data in the contract: the payment amount and date, days "
+        "overdue and status are measured after the outcome, so keep them out of a predictive "
+        "model (section 6.2)."
+    )
 
 
 def render(

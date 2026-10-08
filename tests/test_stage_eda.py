@@ -153,6 +153,36 @@ def test_a_recommendation_only_appears_when_its_trigger_fired():
     assert "zero original debt" in text.split("## 13. Recommendations")[1]
 
 
+def fired(rows):
+    df = frame(rows)
+    return {what for what, _ in E.recommendations(df, E.quality_checks(df), SETTINGS)}
+
+
+def test_the_term_recommendation_needs_a_long_right_tail():
+    flat = [raw(i) for i in range(1, 9)]  # every slip has the same term
+    assert "term (days to first due date) with a long right tail" not in fired(flat)
+    short = [raw(i, due_date="2026-03-04") for i in range(1, 21)]
+    long_ = [raw(i, due_date="2026-09-01") for i in range(21, 23)]
+    assert "term (days to first due date) with a long right tail" in fired(short + long_)
+
+
+def test_the_person_recommendation_needs_a_person_with_two_slips():
+    alone = [raw(i) for i in range(1, 5)]
+    assert "people with more than one slip" not in fired(alone)
+    shared = [raw(1, person_key="pk_x"), raw(2, person_key="pk_x"), raw(3), raw(4)]
+    assert "people with more than one slip" in fired(shared)
+
+
+def test_the_report_says_so_when_nothing_fired_and_keeps_the_fixed_advice():
+    rows = [raw(i) for i in range(1, 5)]
+    assert fired(rows) == set()
+    ds = dataset(rows)
+    section = E.render(ds, F.analysis_frame(ds, SETTINGS), SETTINGS).render()
+    section = section.split("## 13. Recommendations")[1].split("## 14.")[0]
+    assert "No check fired a recommendation" in section
+    assert "Fixed advice" in section and "keep them out of a predictive model" in section
+
+
 def test_cli_writes_the_report(tmp_path):
     path = dataset([raw(1), paid_on_time(2), raw(3, due_date="2026-03-20")]).save(
         tmp_path / "ds.json"
