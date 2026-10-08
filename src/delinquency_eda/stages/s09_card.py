@@ -30,7 +30,7 @@ from typing import Any
 
 from delinquency_eda.context import Context
 from delinquency_eda.dataset import fetch_slips
-from delinquency_eda.dates import parse_date_arg, to_date
+from delinquency_eda.dates import date_argument, to_date
 from delinquency_eda.derive import OVERDUE_UNPAID, PAID_ON_TIME, TO_MATURE
 from delinquency_eda.errors import ConfigError
 from delinquency_eda.report import Doc, fmt_int, fmt_money, fmt_rate
@@ -159,7 +159,7 @@ def _ratio(value: float) -> str:
 
 
 def add_arguments(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument("--as-of", type=parse_date_arg, help="reference date (default: today)")
+    parser.add_argument("--as-of", type=date_argument, help="reference date (default: today)")
     parser.add_argument(
         "--period",
         action="append",

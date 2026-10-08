@@ -25,7 +25,7 @@ import pandas as pd
 
 from delinquency_eda import derive
 from delinquency_eda.context import Context
-from delinquency_eda.dates import parse_date_arg, to_date
+from delinquency_eda.dates import date_argument, to_date
 from delinquency_eda.errors import ConfigError, DatasetError
 from delinquency_eda.report import Doc, fmt_int, fmt_money
 
@@ -215,7 +215,7 @@ def add_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--reference-date",
         required=True,
-        type=parse_date_arg,
+        type=date_argument,
         help="the earlier date to replay (YYYY-MM-DD)",
     )
     parser.add_argument(
