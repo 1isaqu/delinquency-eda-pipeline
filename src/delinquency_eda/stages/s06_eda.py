@@ -494,7 +494,7 @@ def _correlation(doc: Doc, df: pd.DataFrame) -> None:
         ],
         ["column", "Spearman vs non-payment (mature)", "leaks the outcome"],
     )
-    doc.p("Spearman is monotonic and robust to the long tails these columns have.")
+    doc.p("Spearman uses ranks only, so the long tails these columns can have do not distort it.")
     pairs = collinear_pairs(df)
     doc.p("Collinear predictors (|Spearman| above 0.5, leakage columns excluded):")
     if len(pairs):

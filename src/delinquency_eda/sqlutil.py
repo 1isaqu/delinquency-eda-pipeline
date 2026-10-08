@@ -1,7 +1,7 @@
 """Small SQL text helpers: a read-only guard and parameter-list utilities.
 
-The guard is a seat belt, not a security boundary. The real protection is a database login that
-only holds read permission; use one.
+The guard catches mistakes in the pipeline's own SQL. Access control still has to come from a
+database login that only holds read permission; use one.
 """
 
 from __future__ import annotations

@@ -1,7 +1,7 @@
-"""Stage 08 - cleaning: additive, reversible, and honest about what it changed.
+"""Stage 08 - cleaning: additive, reversible, with a report of what it changed.
 
-The diagnostics usually show that the data is structurally clean and semantically tricky: columns
-are valid but cannot be used as they stand. So the rules add information and remove none.
+A column can be valid and still unusable as it stands (a zero balance, a field measured after the
+outcome), so the rules add information and remove none.
 
     R1  ``is_system``      flag rows owned by listed system agents (flagged, never deleted)
     R2  ``zero_balance``   flag a zero original debt; the installment ratio stays NaN, no imputation
@@ -11,8 +11,9 @@ are valid but cannot be used as they stand. So the rules add information and rem
     R6  ``group_key``      person key (or the debtor row when there is none), the unit to split on
     R7  ``is_mature``      outcome is final; models train on mature rows only
 
-Outliers are kept (rule: none): long-tailed money is real. Two tables are written, ``full`` (every
-row) and ``analytic`` (system rows removed, the default view), plus a meta file that models read.
+Outliers are kept (rule: none): a winsorized value would erase the large slips. Two tables are
+written, ``full`` (every row) and ``analytic`` (system rows removed, the default view), plus a meta
+file that models read.
 The report ends with an information-loss summary: rows removed, cells imputed, columns removed,
 columns added, and how much the baseline moved.
 """

@@ -1,10 +1,10 @@
 """Stage 10 - payment-term model: how much of the term effect survives controlling for the mix?
 
-The analysis stage usually finds one factor that dominates: the number of days the agent grants
-between the agreement and the first due date. The obvious objection is confounding. Agents,
-portfolios, product lines and ticket sizes differ, and the longer terms may simply sit with the
-riskier mix. This stage asks the narrow question: *given the same mix, is a longer term still
-associated with more non-payment?*
+The analysis stage reports the term, the number of days the agent grants between the agreement
+and the first due date, as one factor among others. Reading its unpaid rate at face value invites
+the objection of confounding. Agents, portfolios, product lines and ticket sizes differ, and the
+longer terms may simply sit with the riskier mix. This stage asks the narrow question: *given the
+same mix, is a longer term still associated with more non-payment?*
 
 Constraints the earlier stages impose, all respected here:
 
@@ -23,8 +23,8 @@ hold-out; and a counterfactual that rewrites only the term and keeps everything 
 
 Read the result as an association measured under control, not as proof that changing the term
 changes behavior: people who ask for a long term may already be the people who cannot pay. Only a
-randomized term would settle that. A modest AUC is expected and fine; the model is here to
-measure an effect, not to predict who pays.
+randomized term would settle that. A modest AUC does not argue against a real term effect: the
+model measures an effect, it does not predict who pays.
 """
 
 from __future__ import annotations
@@ -480,8 +480,8 @@ def render(result: ModelResult, settings: Settings) -> Doc:
             "Odds ratios above 1 mean more non-payment than the reference band, with the other "
             "features held fixed. They are associations: people who ask for a long term may "
             "already be the people who cannot pay.",
-            "A modest AUC is normal for collections data. The model measures an effect; it is "
-            "not a scoring tool.",
+            "A modest AUC does not argue against a real term effect. The model measures an "
+            "effect; it is not a scoring tool.",
             "A randomized term (draw the term offered among eligible agreements, compare payment "
             "at the end of the grace period) is the only design that would show cause.",
         ]
