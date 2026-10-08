@@ -1,7 +1,7 @@
 # Data contract
 
-The pipeline never touches your real table names. It reads **nine tables with fixed names and
-columns**. You map your own database onto them, most simply with views, and point the adapter at
+The pipeline never touches your real table names. It reads nine tables with fixed names and
+columns. You map your own database onto them, most simply with views, and point the adapter at
 the schema that holds them. This page is the whole contract.
 
 Names are generic on purpose. `docs/glossary.md` defines the vocabulary.
@@ -15,8 +15,8 @@ Names are generic on purpose. `docs/glossary.md` defines the vocabulary.
 | Dates | `date` or `datetime`. Only the calendar day is used. SQLite databases may store ISO text (`YYYY-MM-DD` or `YYYY-MM-DD hh:mm:ss`). |
 | Money | Any numeric type. One currency per database. |
 | Nulls | Allowed where the table below says so. A missing payment is `NULL`, never `0`. |
-| Statuses | Resolved **by label**, never by number. The numbers can differ between databases. |
-| Identifiers of people | Never needed. The pipeline links a person across rows through an **opaque `person_key`** that you supply. Do not put a national id, name, phone number or e-mail in it. |
+| Statuses | Resolved by label, never by number. The numbers can differ between databases. |
+| Identifiers of people | Never needed. The pipeline links a person across rows through an opaque `person_key` that you supply. Do not put a national id, name, phone number or e-mail in it. |
 
 ## Tables
 
@@ -41,7 +41,7 @@ columns per table; those are marked *optional* and are checked by the `schema` s
 | `status_id` | integer | no | Links to `agreement_statuses`. |
 | `agent_id` | text or integer | no | Links to `agents`. |
 
-An installment can be written twice by mistake. **The latest row wins**: for each
+An installment can be written twice by mistake. The latest row wins: for each
 `(agreement_id, portfolio_id, installment_no)` the pipeline keeps the row with the greatest
 `issued_at`, then the greatest `row_id`. Business filters (due-date window, status, excluded agents)
 run *before* that ranking, so a re-write that falls outside a filter cannot hide the valid row.
@@ -84,7 +84,7 @@ with no link has an *unknown* original debt (not zero).
 | Column | Type | Null | Meaning |
 |---|---|---|---|
 | `debt_id` | integer | no | Key. |
-| `balance` | numeric | yes | Current balance. A balance of **zero** is a real value and is kept apart from a missing link. |
+| `balance` | numeric | yes | Current balance. A balance of zero is a real value and is kept apart from a missing link. |
 | `portfolio_id`, `contract_no`, `due_at`, `days_overdue` | various | yes | Optional, not read. |
 
 ### `debt_attributes`: holds the portfolio label
@@ -94,7 +94,7 @@ with no link has an *unknown* original debt (not zero).
 | `debt_id` | integer | no | Key. |
 | `portfolio_label` | text | yes | Human label such as `Bank A II`. Free text. |
 
-The label hangs off the debt, not the agreement. The pipeline takes **one** label per agreement (the
+The label hangs off the debt, not the agreement. The pipeline takes one label per agreement (the
 lowest `debt_id` that has one) so a join can never multiply rows.
 
 ### `debtors`: debtor rows and the opaque person key
@@ -102,7 +102,7 @@ lowest `debt_id` that has one) so a join can never multiply rows.
 | Column | Type | Null | Meaning |
 |---|---|---|---|
 | `debtor_id` | integer | no | Key, as used in `agreements` and `contact_events`. |
-| `person_key` | text | yes | **Opaque** token: the same person gets the same key on every debtor row, in every product line. |
+| `person_key` | text | yes | Opaque token: the same person gets the same key on every debtor row, in every product line. |
 
 The key lets the pipeline gather one person's follow-up and earlier breaks across portfolios, and
 split train from test by person. Generate it however you like (a salted hash of whatever
@@ -128,7 +128,7 @@ with a `NULL` key are never pooled together.
 | `answered` | bit / 0-1 | Someone picked up. |
 | `right_party` | bit / 0-1 | The right person was reached. |
 
-A **right-party contact (CPC)** is `answered = 1 AND right_party = 1`. Requiring both keeps the
+A right-party contact (CPC) is `answered = 1 AND right_party = 1`. Requiring both keeps the
 funnel monotonic: attempts >= answered >= CPC. A flag that fires without an answer would let
 auto-dispatched messages and bounces count as contact.
 
@@ -163,8 +163,8 @@ configured status label that is missing from `agreement_statuses`.
 
 ## What is and is not exercised against a live database
 
-The extraction SQL is exercised end to end against **SQLite** (the demo databases and the tests).
-For **SQL Server** the pipeline generates T-SQL (`WITH (NOLOCK)` on every table, `OUTER APPLY
+The extraction SQL is exercised end to end against SQLite (the demo databases and the tests).
+For SQL Server the pipeline generates T-SQL (`WITH (NOLOCK)` on every table, `OUTER APPLY
 (SELECT TOP 1 ...)` for the portfolio label, bound `date` parameters), and the tests check that SQL
 text and the connection-string handling through a fake DB-API connection. It has not been run
 against a live SQL Server. Run `schema` first and expect to adjust types in your views.

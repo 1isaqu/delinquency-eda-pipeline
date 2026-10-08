@@ -1,7 +1,6 @@
 # Key decisions
 
-Each entry says what was decided, why, and what it costs. They are the choices that make the
-analysis trustworthy; most of them were learned the hard way on real receivables data.
+Each entry says what was decided and why.
 
 ## 1. Treat the "overdue unpaid" bucket as censored, and cut by maturity
 
@@ -64,18 +63,18 @@ scalar subquery on SQLite, instead of a join.
 never imputed. The installment-to-debt ratio is `NaN` where undefined.
 
 **Why.** Testing `if original_debt:` treats zero as falsy and files it with the missing rows under
-the wrong label. The zero often carries signal (it can be close to a proxy for product line), so
-imputing a number would invent one.
+the wrong label. A zero balance can carry signal of its own (the EDA report shows its share per
+product line), so imputing a number would invent one.
 
 ## 8. Cleaning only adds
 
 **Decision.** Rules flag, derive and list. They never delete a row, impute a cell or drop a column,
 and the stage reports exactly that: zero rows removed, zero cells imputed, zero columns removed.
 
-**Why.** When data is structurally clean and semantically tricky, destructive cleaning only destroys
-information. Everything additive is reversible, and the information-loss summary makes it checkable.
-Outliers are kept because money is long-tailed: winsorising would erase the large slips that carry
-most of the value.
+**Why.** Deleting or imputing rows throws away information that a flag keeps, and a flag can be
+undone. Everything additive is reversible, and the information-loss summary makes it checkable.
+Outliers are kept: winsorising would erase the large slips, which weigh the most in any value
+total.
 
 ## 9. Separate concentration from discrimination
 
@@ -127,12 +126,13 @@ or `WITH ... SELECT`; the SQLite connection is also opened read-only.
 
 **Why.** No schema, host or credential is baked into the code, and the same SQL text runs against
 both engines except for three documented dialect differences (table hints, the top-one lookup, date
-binding). The guard is a seat belt, not a security boundary: use a read-only login.
+binding). The guard catches mistakes in the pipeline's own SQL; access control still has to come
+from a read-only login.
 
 ## 15. No data and no fitted artifacts in the repository
 
 **Decision.** Tests use inline invented rows or a seeded generator. Datasets, reports and the
 cleaned tables are written under gitignored paths. Models are fitted in memory and never saved.
 
-**Why.** The code is the product. A dataset file carries whatever identifiers your database
+**Why.** The repository holds code only. A dataset file carries whatever identifiers your database
 supplies, so the default location is ignored and the README says to keep it out of version control.
