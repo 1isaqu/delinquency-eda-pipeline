@@ -68,11 +68,11 @@ class Settings:
     term_band_edges: tuple[int, ...] = (0, 2, 5, 10, 20)
     value_band_edges: tuple[float, ...] = (100, 500, 2000, 10000)
     ratio_band_edges: tuple[float, ...] = (0.05, 0.2, 0.5)
-    installment_band_edges: tuple[int, ...] = (1, 3, 6, 12, 24)
+    installment_band_edges: tuple[int, ...] = (1, 2, 4, 8, 16)
 
     # --- reporting and diagnostics ---------------------------------------------------------
     min_n_reliable: int = 30
-    min_n_weak: int = 10
+    min_n_weak: int = 8
     chronic_break_threshold: int = 4
     mnar_gap_pp: float = 10.0
     stability_range_pp: float = 10.0

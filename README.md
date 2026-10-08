@@ -175,9 +175,9 @@ error, not silently ignored.
 | `term_band_edges` | `0, 2, 5, 10, 20` | upper edges of the term bands, in days (right-closed) |
 | `value_band_edges` | `100, 500, 2000, 10000` | first-installment value bands |
 | `ratio_band_edges` | `0.05, 0.2, 0.5` | installment-to-debt ratio bands |
-| `installment_band_edges` | `1, 3, 6, 12, 24` | installment-count bands |
+| `installment_band_edges` | `1, 2, 4, 8, 16` | installment-count bands |
 | `min_n_reliable` | `30` | group size from which a rate is flagged reliable |
-| `min_n_weak` | `10` | group size from which it is flagged weak (below: not reliable) |
+| `min_n_weak` | `8` | group size from which it is flagged weak (below: not reliable) |
 | `chronic_break_threshold` | `4` | earlier breaks from which a debtor is called chronic |
 | `mnar_gap_pp` | `10.0` | unpaid-rate gap, in points, from which a null is said to carry signal |
 | `stability_range_pp` | `10.0` | spread across months, in points, from which pooling months is flagged |
