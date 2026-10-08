@@ -42,7 +42,7 @@ same date builds the same dataset byte for byte.
 
 ## 00 `period`: which window reproduces the funnel?
 
-A summary card rarely says which window it used: month to date up to today or up to yesterday? the
+A summary card may not say which window it used: month to date up to today or up to yesterday? the
 whole previous month? This stage evaluates the funnel `generated = paid_on_time + overdue_unpaid +
 to_mature` over candidate windows and ranks them by closeness to the counts you already have.
 
@@ -111,7 +111,7 @@ follow-up going with more non-payment is reverse causality, not evidence that ou
 
 ## 04 `drift`: which slips moved?
 
-A card shown on one day rarely matches a re-run made later. This stage re-derives every outcome as
+A card shown on one day need not match a re-run made later. This stage re-derives every outcome as
 of an earlier `--reference-date` (a payment dated after it did not exist yet; an agreement made
 after it did not exist yet) and compares with now: bucket counts and values on both dates, a
 transition matrix, the slips that left the unpaid bucket (movers), and those that entered it. If you
@@ -141,7 +141,7 @@ of fixed advice sits below the table: keep columns measured after the outcome ou
 
 ## 07 `diagnose`: cleaning diagnostics (report only)
 
-In the order that keeps each step honest about the one before: structural (whitespace, control
+In the order in which each step depends on the one before: structural (whitespace, control
 characters, names stuck at one exact length, which suggests truncation at the source), types
 (unparseable dates; person keys that look numeric and would lose leading zeros), duplicates (whole
 row, row id, agreement, row id across product lines), missing values (with a check on whether the

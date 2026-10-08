@@ -1,6 +1,6 @@
 """Stage 04 - drift: replay the buckets at an earlier date and reconcile a headline figure.
 
-A summary card shown on one day rarely matches a re-run made later, and the first question is
+A summary card shown on one day need not match a re-run made later, and the first question is
 always "which slips moved?". This stage answers it offline, from the dataset alone. Each slip's
 outcome is re-derived as of a reference date (a payment dated after that day did not exist yet,
 and an agreement made after it did not exist either), then compared with the outcome now:

@@ -209,7 +209,7 @@ error, not silently ignored.
 
 | # | Command | What it computes, and why |
 |--:|---|---|
-| 00 | `period` | The funnel (generated, paid on time, overdue unpaid, to mature) over candidate date windows from one fetch, ranked by closeness to counts you already have. A card rarely says which window it used. |
+| 00 | `period` | The funnel (generated, paid on time, overdue unpaid, to mature) over candidate date windows from one fetch, ranked by closeness to counts you already have. A card may not say which window it used. |
 | 01 | `schema` | Which contract tables and columns exist, their types, and whether configured status labels are in the catalogue. Run first against a new database. |
 | 02 | `base` | The dataset bundle: first-installment slips with derived outcomes, the debtor rows of the same people, outreach events, and earlier broken agreements. Everything after it is offline. |
 | 03 | `analysis` | Per factor, concentration of the unpaid value and discrimination of the unpaid rate on the mature cohort, with lift and sample-size flags. |

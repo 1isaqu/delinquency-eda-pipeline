@@ -1,6 +1,6 @@
 """Stage 00 - period selection: which date window reproduces the funnel you were shown?
 
-Every later number depends on the window, and a summary card rarely says which window it used
+Every later number depends on the window, and a summary card may not say which window it used
 ("month to date" up to today or up to yesterday? the whole previous month?). This stage evaluates
 the standard funnel over several candidate windows and tells you which one is closest to the
 counts you already have.

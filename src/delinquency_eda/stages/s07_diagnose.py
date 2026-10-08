@@ -1,6 +1,6 @@
 """Stage 07 - cleaning diagnostics. Quantifies problems, changes nothing.
 
-The order is the one that keeps each step honest about the one before: structural, types,
+The order is the one in which each step depends on the one before: structural, types,
 duplicates, missing values, invalid or inconsistent values, outliers. Nothing is written except
 the report, so this stage is safe to run on any dataset and to re-run after the data changes.
 
