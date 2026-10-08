@@ -41,7 +41,7 @@ TEXT_COLUMNS = (
 )
 DATE_COLUMNS = ("agreement_date", "due_date", "paid_date")
 NAME_COLUMNS = ("agent_name", "agent_login", "portfolio_label")
-MONEY_COLUMNS = ("first_installment_value", "total_value", "original_debt", "days_to_due")
+LONG_TAIL_COLUMNS = ("first_installment_value", "total_value", "original_debt", "days_to_due")
 _CONTROL = re.compile(r"[\x00-\x1f\x7f]")
 
 
@@ -211,7 +211,7 @@ def suspect_agents(df: pd.DataFrame, pattern: str) -> pd.DataFrame:
 
 def outlier_table(df: pd.DataFrame, k: float) -> pd.DataFrame:
     rows = []
-    for c in (c for c in MONEY_COLUMNS if c in df.columns):
+    for c in (c for c in LONG_TAIL_COLUMNS if c in df.columns):
         s = df[c].dropna()
         if s.empty:
             continue
@@ -307,8 +307,8 @@ def render(d: Diagnosis, settings: Settings) -> Doc:
     doc.h2(f"6. Outliers (IQR fence, k = {settings.outlier_iqr_k:g})")
     doc.table(d.outliers, float_format="{:,.2f}")
     doc.p(
-        "Money columns are long-tailed, so an IQR fence flags a lot of legitimate values. Keep "
-        "them; if a linear model needs them, use log1p, not capping."
+        "A long right tail makes an IQR fence flag many legitimate values. Keep them; if a "
+        "linear model needs them, use log1p, not capping."
     )
     doc.rule()
     doc.p("Diagnosis finished. Nothing was changed or written besides this report.")
