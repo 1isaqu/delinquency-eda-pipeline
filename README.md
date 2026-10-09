@@ -297,7 +297,8 @@ The reasoning for each is in [docs/decisions.md](docs/decisions.md).
   through a fake DB-API connection and by inspecting the generated T-SQL (hints, top-one lookup,
   bound dates, parameter order). The extraction SQL runs end to end only on SQLite.
 - CI runs the suite on Python 3.10, 3.12 and 3.14. `requires-python` is `>=3.10`, so 3.11 and 3.13
-  install but are not in the CI matrix.
+  install but are not in the CI matrix. Development and the local test runs used Python 3.14 on
+  Windows.
 - The default settings (grace period, bands, status labels, exclusion patterns, reliability floors)
   are placeholders so the demo runs. The demo generator is arbitrary too: every constant in it (line
   sizes, ticket scales, zero-balance shares, payment-model coefficients) is a hand-picked value, not
