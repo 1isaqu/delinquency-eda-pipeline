@@ -7,7 +7,7 @@ Rules every query follows (they are the pipeline's standard behavior, not option
   ``(agreement_id, portfolio_id, installment_no)`` wins. Business filters (date window, status,
   excluded agents) sit *inside* the ranked derived table, before ``ROW_NUMBER``. Filtering after
   ranking would let a re-write that falls outside the filter hide the valid row.
-* an agreement whose agent has no row in ``agents`` is kept, with an empty name and login, so the
+* an agreement whose agent has no row in ``agents`` is kept, with a null name and login, so the
   join to ``agents`` never drops a slip,
 * the portfolio label is resolved with a single top-one lookup per agreement, so joins never
   multiply rows,

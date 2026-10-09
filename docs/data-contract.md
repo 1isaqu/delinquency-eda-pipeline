@@ -20,8 +20,8 @@ Names are generic on purpose. `docs/glossary.md` defines the vocabulary.
 
 ## Tables
 
-"Required" columns are read by the pipeline. The shared collections contract has a few more
-columns per table; those are marked *optional* and are checked by the `schema` stage but not read.
+"Required" columns are read by the pipeline. Columns marked *optional* are checked by the `schema`
+stage but not read, so a missing one is only reported.
 
 ### `agreements`: one row per installment of an agreement
 
@@ -68,7 +68,7 @@ The default labels are `ACTIVE`, `BROKEN`, `PAID`, `PENDING_EXCEPTION`, `REJECTE
 
 Use invented or internal ids. Real names are not needed anywhere.
 
-An agreement whose `agent_id` has no row in `agents` is still extracted, with an empty name and
+An agreement whose `agent_id` has no row in `agents` is still extracted, with a null name and
 login. The exclusion patterns match on name and login, so they cannot exclude such an agreement;
 list every agent, including system accounts, if you rely on them.
 
@@ -126,7 +126,7 @@ with a `NULL` key are never pooled together.
 | Column | Type | Null | Meaning |
 |---|---|---|---|
 | `event_id` | integer | no | Key. |
-| `debtor_id` | integer | no | Debtor the attempt was about. The shared contract calls this `debt_owner_id`; expose it as `debtor_id`. |
+| `debtor_id` | integer | no | Debtor the attempt was about. If your table names it differently (for example `debt_owner_id`), expose it as `debtor_id` in the view. |
 | `result_id` | integer | no | Links to `contact_results`. |
 | `occurred_at` | datetime | no | When it happened. |
 | `agent_id` | text or integer | yes | Optional, not read. |
