@@ -46,7 +46,7 @@ Terms and field names used in the code, reports and settings.
 | `status_id`, `status_label` | Status of the agreement. |
 | `first_installment_value` | Amount of the first installment. |
 | `total_value` | Sum of all installments of the agreement (each installment's latest row). |
-| `total_installments`, `plan_installments` | Installments actually generated, and the plan the agreement declared. |
+| `total_installments`, `plan_installments` | Installments generated, and the plan the agreement declared. |
 | `original_debt` | Sum of the balances of the linked debts, each as of the agreement date. `NaN` when nothing is linked. |
 | `agent_id`, `agent_name`, `agent_login` | The owner. |
 | `portfolio_label` | Label of one linked debt. |
