@@ -19,7 +19,8 @@ the dataset file `base` wrote, so it is repeatable and safe to run on a laptop w
 | 10 | `model` | dataset | `model.md` |
 
 Exit codes: `0` success, `1` a stage ran and reported a failed check (only `schema` does this),
-`2` usage or configuration problem. Errors print as one `error: ...` line, never a traceback.
+`2` usage or configuration problem. Errors print an `error: ...` line (a usage error prints the
+usage text before it), never a traceback.
 
 ## The outcome every stage shares
 
@@ -42,11 +43,12 @@ same date builds the same dataset byte for byte.
 
 ## 00 `period`: which window reproduces the funnel?
 
-A summary card rarely says which window it used: month to date up to today or up to yesterday? the
-whole previous month? This stage evaluates the funnel `generated = paid_on_time + overdue_unpaid +
-to_mature` over candidate windows and ranks them by closeness to the counts you already have.
+Use this stage when a summary card does not say which window it covers: month to date up to today
+or up to yesterday, or the whole previous month? It evaluates the funnel
+`generated = paid_on_time + overdue_unpaid + to_mature` over candidate windows and ranks them by
+closeness to the counts you already have.
 
-- Slips are fetched **once** over the widest span; every window is evaluated in Python, so adding a
+- Slips are fetched once over the widest span; every window is evaluated in Python, so adding a
   candidate is free.
 - Default candidates: month to date, today only, month to yesterday, previous month, last 7 days,
   last 30 days. Empty and duplicate spans are dropped (on the first of a month, "month to yesterday"
@@ -80,7 +82,8 @@ Rules the SQL follows (details in `docs/decisions.md`): read only; latest row wi
 with filters applied before the ranking; excluded-agent patterns applied inside the SQL; one
 portfolio label per agreement through a single top-one lookup; bound dates. Whole-agreement value
 and installment count are aggregated per agreement from each installment's latest row; original
-debt is the sum of the balances of the linked debts. The file holds whatever keys and agent ids your database supplies: keep it out of version
+debt is the sum of the balances of the linked debts, which the contract defines as of the agreement
+date. The file holds whatever keys and agent ids your database supplies: keep it out of version
 control (the default `data/` path is gitignored).
 
 ## 03 `analysis`: which factors separate payers from non-payers?
@@ -90,7 +93,7 @@ Two tables per factor, because they answer different questions:
 | Table | Population | Question |
 |---|---|---|
 | Concentration | every overdue-unpaid slip | where does the unpaid value sit? |
-| Discrimination | the **mature** cohort only | does this group fail more or less than the baseline? |
+| Discrimination | the mature cohort only | does this group fail more or less than the baseline? |
 
 A factor can top the concentration table just by being big. Only discrimination says whether it
 separates payers from non-payers, and it uses mature slips because a slip still inside its grace
@@ -103,14 +106,14 @@ agreements (grouped and yes/no), first installment against original debt, first-
 term (days from agreement to first due date), installment count, and follow-up by repeat debtor.
 Bands come from the settings. The report also shows the same bucket under three value measures
 (first installment, whole agreement, original debt), because a headline figure sums one of them and
-they differ by a large factor.
+they can differ a lot.
 
-Follow-up is **descriptive only**. Outreach targets people who are already slipping, so more
+Follow-up is descriptive only. If outreach goes to people who are already slipping, more
 follow-up going with more non-payment is reverse causality, not evidence that outreach hurts.
 
 ## 04 `drift`: which slips moved?
 
-A card shown on one day rarely matches a re-run made later. This stage re-derives every outcome as
+A card shown on one day need not match a re-run made later. This stage re-derives every outcome as
 of an earlier `--reference-date` (a payment dated after it did not exist yet; an agreement made
 after it did not exist yet) and compares with now: bucket counts and values on both dates, a
 transition matrix, the slips that left the unpaid bucket (movers), and those that entered it. If you
@@ -134,11 +137,14 @@ checks with severities, two deep dives (a zero balance is a value, not a gap; ta
 cardinality with rare categories, referential integrity between the four tables, monthly coverage
 with a stability verdict, Spearman correlation with non-payment (leaking columns flagged), IQR
 outliers, findings, recommendations and limits. Every finding is a sentence built from numbers
-computed on the dataset at hand, and a recommendation only appears when its trigger fired.
+computed on the dataset at hand. Each row of the recommendation table appears only when a check on
+that dataset fired (for example, the term row needs a long right tail in days to the first due
+date). One line of fixed advice sits below the table: keep columns measured after the outcome out of
+a model.
 
 ## 07 `diagnose`: cleaning diagnostics (report only)
 
-In the order that keeps each step honest about the one before: structural (whitespace, control
+In the order in which each step depends on the one before: structural (whitespace, control
 characters, names stuck at one exact length, which suggests truncation at the source), types
 (unparseable dates; person keys that look numeric and would lose leading zeros), duplicates (whole
 row, row id, agreement, row id across product lines), missing values (with a check on whether the
@@ -159,9 +165,9 @@ nothing but the report. It does not validate identifier formats.
 | R6 `group_key` | the person key, or the debtor row when a slip has none, the unit to split on; keyless slips never pool |
 | R7 `is_mature` | the outcome is final; models train on mature rows only |
 
-Outliers are kept: long-tailed money is real, and a winsorized value would erase the slips that
-carry most of the value. `clean_full.csv` has every row; `clean_analytic.csv` drops the flagged
-system rows. The report ends with an information-loss summary: rows removed, cells imputed, columns
+Outliers are kept: a winsorized value would erase the large slips, which weigh the most in any
+value total. `clean_full.csv` has every row; `clean_analytic.csv` drops the flagged system rows.
+The report ends with an information-loss summary: rows removed, cells imputed, columns
 removed (all zero), columns added, rows flagged, and how far the baseline moved.
 
 ## 09 `card`: the summary card with a maturity cut
@@ -176,16 +182,17 @@ two agree. All periods come from one fetch (`--as-of` sets the date) or from the
 
 ## 10 `model`: the effect of the term with the mix controlled
 
-The analysis stage usually finds one factor that dominates: the days the agent grants between the
-agreement and the first due date. The objection is confounding: agents, portfolios and ticket sizes
-differ, and longer terms may sit with the riskier mix. The question here is narrow: *given the same
-mix, is a longer term still associated with more non-payment?*
+The analysis stage reports the term, the days the agent grants between the agreement and the
+first due date, as one factor among others. Reading its unpaid rate at face value invites the
+objection of confounding: agents, portfolios and ticket sizes differ, and longer terms may sit
+with the riskier mix. The question here is narrow: *given the same mix, is a longer term still
+associated with more non-payment?*
 
 | Choice | Why |
 |---|---|
 | Mature, non-system rows only | the label needs a final outcome |
-| Features known when the term is agreed | no leakage: payment amount and date, days overdue and status are out |
-| No follow-up counts | outreach targets people already slipping: reverse causality |
+| Features known when the term is agreed | no leakage: payment amount and date, days overdue and status are out; the debt balance counts only if it was read as of the agreement (data contract) |
+| No follow-up counts | reverse causality: if outreach goes to people already slipping, follow-up goes with non-payment |
 | Cross-validation grouped by person | rows of one person are not independent; a row split leaks people across folds |
 | Temporal hold-out | train on early agreements, test on late ones: the second validation |
 | Logistic model and gradient boosting | a transparent model for the effect, a flexible one to see if interactions matter |
@@ -194,12 +201,13 @@ mix, is a longer term still associated with more non-payment?*
 
 Outputs: grouped cross-validated AUC for both models against a term-only baseline (and the share of
 the signal above chance the term alone captures); odds ratios of each term band against the
-**shortest observed band**, computed as differences of coefficients so every band is compared with
+shortest observed band, computed as differences of coefficients so every band is compared with
 the same reference; odds ratios for the other controls; permutation importance on the hold-out; and
 a counterfactual that rewrites only the term of every agreement and keeps the rest, which is the
 term's effect isolated from the mix.
 
 Read it as an association measured under control, not as proof that changing the term changes
 behavior: people who ask for a long term may already be the people who cannot pay. A randomized
-term is the only design that would settle that. A modest AUC is normal for collections data; the
-model measures an effect, it does not score people. Models are fitted in memory and never saved.
+term is the only design that would settle that. The model measures an effect under control and is
+not a scoring tool, so read the odds ratios and the counterfactual rather than the AUC alone. Models
+are fitted in memory and never saved.

@@ -22,7 +22,7 @@ from datetime import date
 
 from delinquency_eda.context import Context
 from delinquency_eda.dataset import Dataset, build_dataset
-from delinquency_eda.dates import parse_date_arg
+from delinquency_eda.dates import date_argument
 from delinquency_eda.derive import BUCKETS
 from delinquency_eda.report import Doc, fmt_money
 
@@ -98,18 +98,18 @@ def add_arguments(parser: argparse.ArgumentParser) -> None:
         "--from",
         dest="date_from",
         required=True,
-        type=parse_date_arg,
+        type=date_argument,
         help="first due date to include (YYYY-MM-DD)",
     )
     parser.add_argument(
         "--to",
         dest="date_to",
         required=True,
-        type=parse_date_arg,
+        type=date_argument,
         help="last due date to include, inclusive (YYYY-MM-DD)",
     )
     parser.add_argument(
-        "--as-of", type=parse_date_arg, help="reference date for outcomes (default: today)"
+        "--as-of", type=date_argument, help="reference date for outcomes (default: today)"
     )
 
 

@@ -1,16 +1,18 @@
 """Stage 10 - payment-term model: how much of the term effect survives controlling for the mix?
 
-The analysis stage usually finds one factor that dominates: the number of days the agent grants
-between the agreement and the first due date. The obvious objection is confounding. Agents,
-portfolios, product lines and ticket sizes differ, and the longer terms may simply sit with the
-riskier mix. This stage asks the narrow question: *given the same mix, is a longer term still
-associated with more non-payment?*
+The analysis stage reports the term, the number of days the agent grants between the agreement
+and the first due date, as one factor among others. Reading its unpaid rate at face value invites
+the objection of confounding. Agents, portfolios, product lines and ticket sizes differ, and the
+longer terms may simply sit with the riskier mix. This stage asks the narrow question: *given the
+same mix, is a longer term still associated with more non-payment?*
 
 Constraints the earlier stages impose, all respected here:
 
 * **labels need maturity**: only mature slips (final outcome) are in the cohort,
 * **no leakage**: only information known when the term is agreed is a feature; payment amount,
-  payment date, days overdue and status are out (see ``features.LEAKAGE_COLUMNS``),
+  payment date, days overdue and status are out (see ``features.LEAKAGE_COLUMNS``). The debt
+  balance is a feature too, so it must be the balance as of the agreement date; the data contract
+  says so and the pipeline cannot check it,
 * **no reverse causality**: follow-up counts are out too (``EXPLANATORY_ONLY_COLUMNS``),
 * **people are not independent**: cross-validation is grouped by person, never by row,
 * **time**: a temporal hold-out (train on early agreements, test on late ones) is the second check,
@@ -23,8 +25,8 @@ hold-out; and a counterfactual that rewrites only the term and keeps everything 
 
 Read the result as an association measured under control, not as proof that changing the term
 changes behavior: people who ask for a long term may already be the people who cannot pay. Only a
-randomized term would settle that. A modest AUC is expected and fine; the model is here to
-measure an effect, not to predict who pays.
+randomized term would settle that. The model measures an effect under control and is not a
+scoring tool, so read the odds ratios and the counterfactual rather than the AUC alone.
 """
 
 from __future__ import annotations
@@ -92,7 +94,11 @@ def _text(series: pd.Series) -> pd.Series:
 
 
 def design_matrix(df: pd.DataFrame) -> pd.DataFrame:
-    """The feature table. Every column is knowable when the term is agreed."""
+    """The feature table.
+
+    Every column is knowable when the term is agreed, provided the debt balance behind
+    ``original_debt`` was read as of the agreement date (see the data contract).
+    """
     debt = df["original_debt"]
     return pd.DataFrame(
         {
@@ -480,8 +486,8 @@ def render(result: ModelResult, settings: Settings) -> Doc:
             "Odds ratios above 1 mean more non-payment than the reference band, with the other "
             "features held fixed. They are associations: people who ask for a long term may "
             "already be the people who cannot pay.",
-            "A modest AUC is normal for collections data. The model measures an effect; it is "
-            "not a scoring tool.",
+            "The model measures an effect under control and is not a scoring tool, so read the "
+            "odds ratios and the counterfactual rather than the AUC alone.",
             "A randomized term (draw the term offered among eligible agreements, compare payment "
             "at the end of the grace period) is the only design that would show cause.",
         ]

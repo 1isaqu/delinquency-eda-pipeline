@@ -50,7 +50,7 @@ STAGES: tuple[Stage, ...] = (
         "model",
         "s10_term_model",
         False,
-        "Days-to-pay model: effect of the term, mix controlled",
+        "Payment-term model: effect of the term, mix controlled",
     ),
 )
 

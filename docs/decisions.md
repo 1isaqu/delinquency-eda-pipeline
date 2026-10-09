@@ -1,7 +1,6 @@
 # Key decisions
 
-Each entry says what was decided, why, and what it costs. They are the choices that make the
-analysis trustworthy; most of them were learned the hard way on real receivables data.
+Each entry says what was decided and why.
 
 ## 1. Treat the "overdue unpaid" bucket as censored, and cut by maturity
 
@@ -29,8 +28,8 @@ set is biased upward for payers.
 `derive.py` against `--as-of`, never with the server clock.
 
 **Why.** Reproducibility (same date, same file, byte for byte), replay (the drift stage re-derives
-the past), and one unit-tested place for the rule. A server clock makes every re-run a different
-experiment and every number impossible to reconcile later.
+the past), and one unit-tested place for the rule. With the server clock, each re-run uses a
+different date, so numbers from two runs cannot be reconciled.
 
 ## 4. Business filters run before the "latest row wins" ranking
 
@@ -43,10 +42,10 @@ agreement. A test pins this with a row built to fail if the order is swapped.
 
 ## 5. Statuses by label, keys by composite
 
-**Decision.** Status sets are configured as labels and resolved through the catalogue. Agreement
+**Decision.** Status sets are configured as labels and resolved through the catalog. Agreement
 keys are `product_line|agreement_id|portfolio_id`.
 
-**Why.** Status numbers differ between databases and across catalogue reloads; a test shifts every
+**Why.** Status numbers differ between databases and across catalog reloads; a test shifts every
 id to prove nothing depends on them. A row id repeats across product lines (each database has its
 own sequence), so on its own it is not a key.
 
@@ -64,18 +63,18 @@ scalar subquery on SQLite, instead of a join.
 never imputed. The installment-to-debt ratio is `NaN` where undefined.
 
 **Why.** Testing `if original_debt:` treats zero as falsy and files it with the missing rows under
-the wrong label. The zero often carries signal (it can be close to a proxy for product line), so
-imputing a number would invent one.
+the wrong label. A zero balance can carry signal of its own (the EDA report shows its share per
+product line), so imputing a number would invent one.
 
 ## 8. Cleaning only adds
 
 **Decision.** Rules flag, derive and list. They never delete a row, impute a cell or drop a column,
 and the stage reports exactly that: zero rows removed, zero cells imputed, zero columns removed.
 
-**Why.** When data is structurally clean and semantically tricky, destructive cleaning only destroys
-information. Everything additive is reversible, and the information-loss summary makes it checkable.
-Outliers are kept because money is long-tailed: winsorising would erase the large slips that carry
-most of the value.
+**Why.** Deleting or imputing rows throws away information that a flag keeps, and a flag can be
+undone. Everything additive is reversible, and the information-loss summary makes it checkable.
+Outliers are kept: winsorizing would erase the large slips, which weigh the most in any value
+total.
 
 ## 9. Separate concentration from discrimination
 
@@ -90,7 +89,7 @@ whether a factor separates payers from non-payers, and a rate on a handful of sl
 **Decision.** Contact counts between agreement and due date appear in the analysis and are excluded
 from the model.
 
-**Why.** Outreach is aimed at people who are already slipping. More follow-up with more non-payment
+**Why.** If outreach goes to people who are already slipping, more follow-up with more non-payment
 is reverse causality. Using it to predict non-payment confuses cause and effect.
 
 ## 11. Group by person, validate by time
@@ -99,8 +98,8 @@ is reverse causality. Using it to predict non-payment confuses cause and effect.
 hold-out is the second check.
 
 **Why.** Rows of one person are not independent. A random split leaks people across train and test
-and inflates the score. A model that holds out in time but not across folds, or the reverse, is
-only half validated.
+and inflates the score. The grouped folds catch leakage between people, and the time hold-out
+catches drift.
 
 ## 12. Odds ratios as coefficient differences against a stated reference
 
@@ -127,12 +126,25 @@ or `WITH ... SELECT`; the SQLite connection is also opened read-only.
 
 **Why.** No schema, host or credential is baked into the code, and the same SQL text runs against
 both engines except for three documented dialect differences (table hints, the top-one lookup, date
-binding). The guard is a seat belt, not a security boundary: use a read-only login.
+binding). The guard catches mistakes in the pipeline's own SQL; access control still has to come
+from a read-only login.
 
 ## 15. No data and no fitted artifacts in the repository
 
 **Decision.** Tests use inline invented rows or a seeded generator. Datasets, reports and the
 cleaned tables are written under gitignored paths. Models are fitted in memory and never saved.
 
-**Why.** The code is the product. A dataset file carries whatever identifiers your database
+**Why.** The repository holds code only. A dataset file carries whatever identifiers your database
 supplies, so the default location is ignored and the README says to keep it out of version control.
+
+## 16. The debt balance is the balance as of the agreement
+
+**Decision.** The contract defines `debts.balance` as what the debt carried on the agreement date.
+The pipeline cannot check it: a value does not say when it was read.
+
+**Why.** Original debt and the zero-balance flag are controls in the term model. A balance read after
+the agreement can already reflect payments, which would carry the outcome into the controls and
+flatter the model.
+
+**Cost.** If you only keep a current balance, you need a snapshot view, or you read the odds ratios
+with those two controls marked as leakage-suspect.

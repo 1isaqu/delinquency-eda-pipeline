@@ -7,6 +7,7 @@ and plain floats.
 
 from __future__ import annotations
 
+import argparse
 import math
 from datetime import date, datetime, timedelta
 from decimal import Decimal
@@ -63,11 +64,19 @@ def to_id(value: Any) -> Any:
 
 
 def parse_date_arg(text: str) -> date:
-    """Command line parser for ``YYYY-MM-DD``."""
+    """``YYYY-MM-DD`` text to a date. Raises ``ConfigError`` on anything else."""
     try:
         return date.fromisoformat(text.strip())
     except ValueError:
         raise ConfigError(f"expected a date as YYYY-MM-DD, got {text!r}") from None
+
+
+def date_argument(text: str) -> date:
+    """``type=`` callback for argparse: a bad date becomes a usage error, not a traceback."""
+    try:
+        return parse_date_arg(text)
+    except ConfigError as exc:
+        raise argparse.ArgumentTypeError(str(exc)) from None
 
 
 def next_day(value: date) -> date:

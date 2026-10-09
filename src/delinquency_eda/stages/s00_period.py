@@ -1,6 +1,6 @@
 """Stage 00 - period selection: which date window reproduces the funnel you were shown?
 
-Every later number depends on the window, and a summary card rarely says which window it used
+Every later number depends on the window, and a summary card may not say which window it used
 ("month to date" up to today or up to yesterday? the whole previous month?). This stage evaluates
 the standard funnel over several candidate windows and tells you which one is closest to the
 counts you already have.
@@ -25,7 +25,7 @@ from typing import Any
 from delinquency_eda import derive
 from delinquency_eda.context import Context
 from delinquency_eda.dataset import fetch_slips
-from delinquency_eda.dates import parse_date_arg, to_date
+from delinquency_eda.dates import date_argument, parse_date_arg, to_date
 from delinquency_eda.errors import ConfigError
 from delinquency_eda.report import Doc, fmt_money
 
@@ -82,7 +82,7 @@ def parse_reference(specs: Sequence[str]) -> dict[str, int]:
 
 
 def default_windows(as_of: date) -> list[Window]:
-    """The windows a summary card usually means, relative to the reference date.
+    """The windows a summary card might cover, relative to the reference date.
 
     Candidates that would be empty (month to yesterday on the first of the month) or that repeat
     another candidate's span are left out.
@@ -189,7 +189,7 @@ def render(
 
 
 def add_arguments(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument("--as-of", type=parse_date_arg, help="reference date (default: today)")
+    parser.add_argument("--as-of", type=date_argument, help="reference date (default: today)")
     parser.add_argument(
         "--window",
         action="append",

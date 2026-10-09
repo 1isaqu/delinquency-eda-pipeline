@@ -21,9 +21,9 @@
                  database                       reports/*.md  clean_*.csv
 ```
 
-`base` is the bridge: it is the only stage that turns database rows into the dataset file, and
-every offline stage starts from that file. That is what makes a run repeatable and lets you do the
-analysis on a machine that cannot reach the database.
+`base` is the only stage that turns database rows into the dataset file, and every offline stage
+starts from that file. That makes a run repeatable and lets you do the analysis on a machine that
+cannot reach the database.
 
 ## Layers
 
@@ -38,18 +38,22 @@ analysis on a machine that cannot reach the database.
 
 ## Data access
 
-**Adapter protocol.** `db.base.Database` has three methods: `query(sql, params)`, `table_columns(table)`
-and `close()`. `DBAPIDatabase` implements them over any PEP 249 connection with an
-`INFORMATION_SCHEMA` catalogue, and checks every statement with `ensure_read_only` first. A subclass
-only chooses the dialect and how the connection is opened:
+### Adapter protocol
+
+`db.base.Database` has three methods: `query(sql, params)`, `table_columns(table)` and `close()`.
+`DBAPIDatabase` implements them over any PEP 249 connection with an `INFORMATION_SCHEMA`
+catalog, and checks every statement with `ensure_read_only` first. A subclass only chooses the
+dialect and how the connection is opened:
 
 | Adapter | Used for | Connection |
 |---|---|---|
 | `SQLiteDatabase` | demo databases, tests | a file path, opened `mode=ro` |
 | `SQLServerDatabase` | real use | `pyodbc` (optional extra), settings from `DEA_DB_*` variables only; an injected connector makes it testable |
 
-**Dialects.** `queries.py` builds portable SQL (CTEs, `ROW_NUMBER`, `IN` lists). Only three things
-differ, and `db/dialect.py` isolates them:
+### Dialects
+
+`queries.py` builds portable SQL (CTEs, `ROW_NUMBER`, `IN` lists). Only three things differ, and
+`db/dialect.py` isolates them:
 
 | Difference | SQL Server | SQLite |
 |---|---|---|
@@ -57,12 +61,16 @@ differ, and `db/dialect.py` isolates them:
 | One label per agreement | `OUTER APPLY (SELECT TOP 1 ... ORDER BY debt_id)` | scalar subquery with `LIMIT 1` |
 | Date parameter | a `date` object | ISO text |
 
-**Queries are pure.** Each builder returns a `Query(sql, params)` and touches no database, which is
-how the tests can assert that every SQL Server table reference carries `NOLOCK`, that filters sit
-inside the ranked table, and the order of bound parameters.
+### Pure queries
 
-**Chunking.** `IN` lists are sent in chunks (`id_chunk_size`, at most 1000) to stay under driver
-parameter limits. A test proves a tiny chunk size returns the same dataset as a large one.
+Each builder returns a `Query(sql, params)` and touches no database, which is how the tests can
+assert that every SQL Server table reference carries `NOLOCK`, that filters sit inside the ranked
+table, and the order of bound parameters.
+
+### Chunking
+
+`IN` lists are sent in chunks (`id_chunk_size`, at most 1000) to stay under driver parameter
+limits. A test proves a tiny chunk size returns the same dataset as a large one.
 
 ## The dataset bundle
 

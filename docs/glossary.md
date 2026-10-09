@@ -9,12 +9,12 @@ Terms and field names used in the code, reports and settings.
 | Product line | One database with the contract schema (for example `auto`, `consumer`). Ids repeat across lines, so keys carry the line. |
 | Agreement | A payment plan a debtor agreed to. One row per installment in `agreements`. |
 | Installment | One payment of an agreement. `installment_no = 0` is the first installment (the down payment). |
-| First-installment slip (slip) | The payment slip of installment 0. The unit the pipeline analyses. |
+| First-installment slip (slip) | The payment slip of installment 0. The unit the pipeline analyzes. |
 | Generated agreement | An agreement whose status is in `generated_status_labels`: the population in scope. |
 | Broken / auto-broken agreement | An agreement that ended broken (by hand or by the system after a grace overflow). Earlier ones count as a person's break history. |
 | Exception (pending approval) | A status awaiting approval. Not in the generated set by default, so it is not extracted. |
-| Portfolio | A group of debts with one label, for example `Bank A II`. |
-| Portfolio group | The label without its trailing sequence token (`Bank A`), used to avoid one category per sequence. |
+| Portfolio | A group of debts with one label, for example `Portfolio A-02`. |
+| Portfolio group | The label without its trailing sequence token (`Portfolio A`), used to avoid one category per sequence. |
 | Agent | The user who owns an agreement. |
 | Outreach attempt | One contact event. |
 | Answered | Someone picked up. |
@@ -47,7 +47,7 @@ Terms and field names used in the code, reports and settings.
 | `first_installment_value` | Amount of the first installment. |
 | `total_value` | Sum of all installments of the agreement (each installment's latest row). |
 | `total_installments`, `plan_installments` | Installments actually generated, and the plan the agreement declared. |
-| `original_debt` | Sum of the balances of the linked debts. `NaN` when nothing is linked. |
+| `original_debt` | Sum of the balances of the linked debts, each as of the agreement date. `NaN` when nothing is linked. |
 | `agent_id`, `agent_name`, `agent_login` | The owner. |
 | `portfolio_label` | Label of one linked debt. |
 | `agreement_date`, `due_date`, `paid_amount`, `paid_date` | Raw dates and payment. |

@@ -46,7 +46,7 @@ TABLES: tuple[TableSpec, ...] = (
         "agreement_statuses",
         required=("status_id", "label"),
         needed_by="slips",
-        meaning="status catalogue",
+        meaning="status catalog",
     ),
     TableSpec(
         "agents",
@@ -85,7 +85,7 @@ TABLES: tuple[TableSpec, ...] = (
     TableSpec(
         "contact_results",
         required=("result_id", "label", "answered", "right_party"),
-        meaning="result catalogue; right-party contact = answered AND right_party",
+        meaning="result catalog; right-party contact = answered AND right_party",
     ),
 )
 

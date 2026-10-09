@@ -1,6 +1,6 @@
 """What the pipeline needs from a database: run one read-only query, describe a table, close.
 
-``DBAPIDatabase`` covers any PEP 249 driver whose catalogue is exposed through
+``DBAPIDatabase`` covers any PEP 249 driver whose catalog is exposed through
 ``INFORMATION_SCHEMA``. Subclasses only choose the dialect and how the connection is opened.
 """
 
@@ -68,7 +68,7 @@ class Database(ABC):
 
 
 class DBAPIDatabase(Database):
-    """A ``Database`` over any PEP 249 connection with an ``INFORMATION_SCHEMA`` catalogue."""
+    """A ``Database`` over any PEP 249 connection with an ``INFORMATION_SCHEMA`` catalog."""
 
     def __init__(self, connection: Connection, dialect: Dialect, *, schema: str | None = None):
         self._connection = connection

@@ -111,7 +111,12 @@ def test_example_settings_file_is_valid_and_matches_the_defaults():
 def test_relative_links_point_at_files_that_exist():
     links = re.findall(r"\]\(([^)#]+?)\)", README)
     local = [target for target in links if not target.startswith(("http://", "https://"))]
-    assert {"docs/architecture.md", "docs/data-contract.md", "docs/stages.md"} <= set(local)
+    assert {
+        "docs/architecture.md",
+        "docs/data-contract.md",
+        "docs/data-sources.md",
+        "docs/stages.md",
+    } <= set(local)
     for target in local:
         assert (ROOT / target).exists(), target
 
@@ -137,7 +142,7 @@ def test_the_layout_block_only_names_files_and_folders_that_exist():
 
 
 @pytest.mark.parametrize(
-    "page", ["architecture", "data-contract", "stages", "decisions", "glossary"]
+    "page", ["architecture", "data-contract", "data-sources", "stages", "decisions", "glossary"]
 )
 def test_every_doc_page_exists_and_has_a_title(page):
     text = (ROOT / "docs" / f"{page}.md").read_text(encoding="utf-8")

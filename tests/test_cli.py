@@ -86,6 +86,35 @@ def test_errors_are_one_line_messages_not_tracebacks(tmp_path, capsys):
     assert err.startswith("error: ") and "Traceback" not in err
 
 
+BAD_DATES = [
+    ["period", "--as-of", "31/03/2026"],
+    ["base", "--from", "nope", "--to", "2026-03-31"],
+    ["base", "--from", "2026-01-01", "--to", "2026-03-31", "--as-of", "2026-13-40"],
+    ["drift", "--reference-date", "2026-13-40"],
+    ["card", "--as-of", "yesterday"],
+]
+
+
+@pytest.mark.parametrize("stage_args", BAD_DATES, ids=lambda a: f"{a[0]}-{a[1]}")
+def test_a_malformed_date_is_a_usage_error(stage_args, capsys):
+    with pytest.raises(SystemExit) as info:
+        build_parser().parse_args(stage_args)
+    assert info.value.code == 2
+    err = capsys.readouterr().err
+    assert "expected a date as YYYY-MM-DD" in err and "Traceback" not in err
+
+
+def test_a_malformed_date_exits_two_when_run_as_a_module():
+    env = {**os.environ, "PYTHONPATH": SRC}
+    done = subprocess.run(
+        [sys.executable, "-m", "delinquency_eda", "drift", "--reference-date", "2026-13-40"],
+        capture_output=True, text=True, env=env, check=False,
+    )  # fmt: skip
+    assert done.returncode == 2
+    assert "Traceback" not in done.stderr
+    assert "expected a date as YYYY-MM-DD" in done.stderr
+
+
 def test_the_environment_supplies_backend_and_sources(world, tmp_path):
     env = {"DEA_BACKEND": "sqlite", "DEA_SOURCES": f"auto={world}"}
     code, out = run_cli("--out-dir", str(tmp_path / "r"), "schema", environ=env)

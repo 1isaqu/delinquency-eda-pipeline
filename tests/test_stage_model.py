@@ -42,7 +42,7 @@ def synthetic_rows(n: int = 360, seed: int = 3, effect: float = 0.7) -> list[dic
             agent_id=f"a{i % 5}",
             agent_name=f"Agent {i % 5}",
             agent_login=f"agent_{i % 5}",
-            portfolio_label=("Bank A I", "Bank B I", "Bank C 01")[i % 3],
+            portfolio_label=("Portfolio A-01", "Portfolio B-01", "Portfolio C-01")[i % 3],
             agreement_date=agreement.isoformat(),
             due_date=due.isoformat(),
             first_installment_value=50.0 + (i % 17) * 20,

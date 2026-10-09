@@ -7,6 +7,8 @@ Rules every query follows (they are the pipeline's standard behavior, not option
   ``(agreement_id, portfolio_id, installment_no)`` wins. Business filters (date window, status,
   excluded agents) sit *inside* the ranked derived table, before ``ROW_NUMBER``. Filtering after
   ranking would let a re-write that falls outside the filter hide the valid row.
+* an agreement whose agent has no row in ``agents`` is kept, with an empty name and login, so the
+  join to ``agents`` never drops a slip,
 * the portfolio label is resolved with a single top-one lookup per agreement, so joins never
   multiply rows,
 * dates are bound parameters, never ``GETDATE()``: the reference date is explicit, so a run can be
@@ -78,7 +80,7 @@ def build_slip_query(
            u.login AS agent_login, u.display_name AS agent_name,
            {LATEST.format(a="r")}
     FROM {t("agreements", "r", schema)}
-    INNER JOIN {t("agents", "u", schema)} ON u.agent_id = r.agent_id
+    LEFT JOIN {t("agents", "u", schema)} ON u.agent_id = r.agent_id
     WHERE r.installment_no = 0
       AND r.due_at >= ? AND r.due_at < ?
       AND r.status_id IN (
@@ -237,7 +239,7 @@ WHERE b.rn = 1"""
 
 
 def build_status_query(dialect: Dialect, schema: str | None = None) -> Query:
-    """The status catalogue, used by the schema check to confirm configured labels exist."""
+    """The status catalog, used by the schema check to confirm configured labels exist."""
     sql = (
         "SELECT s.status_id, s.label\n"
         f"FROM {dialect.table('agreement_statuses', 's', schema)}\n"

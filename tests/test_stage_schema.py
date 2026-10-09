@@ -52,7 +52,7 @@ def test_a_missing_base_only_table_leaves_the_slip_stages_ready(world):
     assert not line.ready("base")
 
 
-def test_a_configured_status_label_missing_from_the_catalogue_is_reported(world):
+def test_a_configured_status_label_missing_from_the_catalog_is_reported(world):
     settings = Settings(generated_status_labels=("ACTIVE", "NOT_A_STATUS"))
     with SQLiteDatabase.open(world) as db:
         line = check_database(db, "auto", settings)
@@ -60,7 +60,7 @@ def test_a_configured_status_label_missing_from_the_catalogue_is_reported(world)
     assert not line.ready("slips")
 
 
-def test_status_labels_are_not_checked_without_a_catalogue(world):
+def test_status_labels_are_not_checked_without_a_catalog(world):
     connection = sqlite3.connect(world)
     connection.execute("DROP TABLE agreement_statuses")
     connection.commit()

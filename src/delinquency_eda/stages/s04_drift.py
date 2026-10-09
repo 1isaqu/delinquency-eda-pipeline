@@ -1,6 +1,6 @@
 """Stage 04 - drift: replay the buckets at an earlier date and reconcile a headline figure.
 
-A summary card shown on one day rarely matches a re-run made later, and the first question is
+A summary card shown on one day need not match a re-run made later, and the first question is
 always "which slips moved?". This stage answers it offline, from the dataset alone. Each slip's
 outcome is re-derived as of a reference date (a payment dated after that day did not exist yet,
 and an agreement made after it did not exist either), then compared with the outcome now:
@@ -25,7 +25,7 @@ import pandas as pd
 
 from delinquency_eda import derive
 from delinquency_eda.context import Context
-from delinquency_eda.dates import parse_date_arg, to_date
+from delinquency_eda.dates import date_argument, to_date
 from delinquency_eda.errors import ConfigError, DatasetError
 from delinquency_eda.report import Doc, fmt_int, fmt_money
 
@@ -215,7 +215,7 @@ def add_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--reference-date",
         required=True,
-        type=parse_date_arg,
+        type=date_argument,
         help="the earlier date to replay (YYYY-MM-DD)",
     )
     parser.add_argument(

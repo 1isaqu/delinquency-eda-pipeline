@@ -50,7 +50,7 @@ class FakeConnection:
         self.closed = True
 
 
-CATALOGUE = (
+CATALOG = (
     ["COLUMN_NAME", "DATA_TYPE", "CHARACTER_MAXIMUM_LENGTH", "NUMERIC_PRECISION",
      "NUMERIC_SCALE", "IS_NULLABLE"],
     [
@@ -160,7 +160,7 @@ def test_driver_errors_are_wrapped_and_statements_without_results_are_errors():
 
 
 def test_table_columns_reads_information_schema_with_the_schema_filter():
-    conn = FakeConnection(lambda sql: CATALOGUE)
+    conn = FakeConnection(lambda sql: CATALOG)
     db = SQLServerDatabase(conn, SQLServerDialect(), schema="dbo")
     cols = db.table_columns("agents")
     assert [(c.name, c.type, c.nullable) for c in cols] == [

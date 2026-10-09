@@ -131,14 +131,15 @@ def test_collinear_pairs_exclude_leakage_columns():
     assert "paid_amount" not in set(pairs["column a"]) | set(pairs["column b"])
 
 
-def test_the_assembled_report_has_ordered_sections_and_no_person_key():
-    rows = [raw(i, person_key=f"pk_secret_{i}") for i in range(1, 6)] + [paid_on_time(6)]
+def test_the_assembled_report_has_ordered_sections_and_no_identifiers():
+    rows = [raw(i, person_key=f"pk_secret_{i}", agent_id=f"ag_secret_{i}") for i in range(1, 6)]
+    rows.append(paid_on_time(6))
     ds = dataset(rows)
     df = F.analysis_frame(ds, SETTINGS)
     text = E.render(ds, df, SETTINGS, file_size=1234).render()
     numbers = [int(m) for m in re.findall(r"^## (\d+)\. ", text, flags=re.MULTILINE)]
     assert numbers == list(range(1, 15))
-    assert "pk_secret_" not in text
+    assert "pk_secret_" not in text and "ag_secret_" not in text
     assert "1,234 bytes" in text
     assert "6.2 Target leakage" in text
 
@@ -151,6 +152,57 @@ def test_a_recommendation_only_appears_when_its_trigger_fired():
     with_zero = dataset([raw(1, original_debt=0.0), paid_on_time(2)])
     text = E.render(with_zero, F.analysis_frame(with_zero, SETTINGS), SETTINGS).render()
     assert "zero original debt" in text.split("## 13. Recommendations")[1]
+
+
+def fired(rows, **kwargs):
+    df = frame(rows, **kwargs)
+    return {what for what, _ in E.recommendations(df, E.quality_checks(df), SETTINGS)}
+
+
+def test_the_term_recommendation_needs_a_long_right_tail():
+    flat = [raw(i) for i in range(1, 9)]  # every slip has the same term
+    assert "term (days to first due date) with a long right tail" not in fired(flat)
+    short = [raw(i, due_date="2026-03-04") for i in range(1, 21)]
+    long_ = [raw(i, due_date="2026-09-01") for i in range(21, 23)]
+    assert "term (days to first due date) with a long right tail" in fired(short + long_)
+
+
+def test_the_rare_category_recommendation_looks_at_agents_and_portfolios():
+    common = [raw(i) for i in range(1, 7)]  # one agent and one label, six slips each
+    assert "rare agents and portfolios" not in fired(common)
+    assert "rare agents and portfolios" in fired([*common, raw(7, agent_id="a2")])
+    odd_label = raw(7, portfolio_label="Portfolio B-01")
+    assert "rare agents and portfolios" in fired([*common, odd_label])
+
+
+def test_the_product_line_recommendation_needs_a_second_line():
+    assert "more than one product line" not in fired([raw(i) for i in range(1, 5)])
+    two = [raw(1), raw(2, product_line="consumer")]
+    assert "more than one product line" in fired(two, lines=("auto", "consumer"))
+
+
+def test_the_categorical_summary_gives_shares_and_no_values():
+    summary = E.categorical_summary(frame([raw(1), raw(2, agent_id="a2"), raw(3)]))
+    assert list(summary.columns) == ["column", "distinct", "% in most frequent value"]
+    agent = summary.set_index("column").loc["agent_id"]
+    assert agent["distinct"] == 2 and agent["% in most frequent value"] == pytest.approx(200 / 3)
+
+
+def test_the_person_recommendation_needs_a_person_with_two_slips():
+    alone = [raw(i) for i in range(1, 5)]
+    assert "people with more than one slip" not in fired(alone)
+    shared = [raw(1, person_key="pk_x"), raw(2, person_key="pk_x"), raw(3), raw(4)]
+    assert "people with more than one slip" in fired(shared)
+
+
+def test_the_report_says_so_when_nothing_fired_and_keeps_the_fixed_advice():
+    rows = [raw(i) for i in range(1, 5)]
+    assert fired(rows) == set()
+    ds = dataset(rows)
+    section = E.render(ds, F.analysis_frame(ds, SETTINGS), SETTINGS).render()
+    section = section.split("## 13. Recommendations")[1].split("## 14.")[0]
+    assert "No check fired a recommendation" in section
+    assert "Fixed advice" in section and "keep them out of a predictive model" in section
 
 
 def test_cli_writes_the_report(tmp_path):

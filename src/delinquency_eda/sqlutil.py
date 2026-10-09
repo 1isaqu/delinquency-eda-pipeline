@@ -1,7 +1,7 @@
 """Small SQL text helpers: a read-only guard and parameter-list utilities.
 
-The guard is a seat belt, not a security boundary. The real protection is a database login that
-only holds read permission; use one.
+The guard catches mistakes in the pipeline's own SQL. Access control still has to come from a
+database login that only holds read permission; use one.
 """
 
 from __future__ import annotations
@@ -34,7 +34,7 @@ ALLOWED_STARTS = ("SELECT", "WITH")
 
 
 def strip_noise(sql: str) -> str:
-    """Remove comments, blank out string literals and neutralise quoted identifiers."""
+    """Remove comments, blank out string literals and neutralize quoted identifiers."""
 
     def repl(match: re.Match[str]) -> str:
         kind = match.lastgroup

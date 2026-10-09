@@ -36,7 +36,7 @@ def test_baseline_uses_only_the_mature_cohort(frame):
     assert result.mature_slips == 3
     assert result.definitive_unpaid == 2
     assert result.baseline == pytest.approx(2 / 3)
-    # the bucket as usually reported also holds the censored row 4
+    # the bucket as the card counts it also holds the censored row 4
     assert result.unpaid_slips == 3
 
 
