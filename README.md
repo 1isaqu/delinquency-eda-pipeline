@@ -13,9 +13,9 @@ code.
 Most of the code is about counting the overdue-unpaid bucket correctly:
 
 - "Overdue and not paid on time" counts slips that can still be paid on time (right-censoring), so
-  the bucket is inflated for the most recent due dates, which is the window a daily dashboard
-  shows. Stage 05 splits the bucket into still open and definitive. Every unpaid rate used to
-  compare groups is computed on the mature cohort, selected by due date alone and never by outcome.
+  the bucket is inflated for the most recent due dates, the ones a month-to-date view holds. Stage
+  05 splits the bucket into still open and definitive. Every unpaid rate used to compare groups is
+  computed on the mature cohort, selected by due date alone and never by outcome.
 - Outcomes are derived in Python against the `--as-of` date, never the database server's clock.
   Without the flag, `period`, `base` and `card` use today's local date, so pass it for a run you
   want to repeat: the same command with the same date writes the same dataset, byte for byte.
@@ -289,8 +289,8 @@ observational.
   can leak the outcome.
 - The model measures an association under control. Nothing here shows that changing a term changes
   behavior, and the data has no field for why a slip was not paid.
-- The model is not a scoring tool. Read its odds ratios and the counterfactual rather than the AUC
-  alone.
+- The model is not a scoring tool. Its odds ratios and counterfactual answer the term question; the
+  AUC only shows how well the features separate payers from non-payers.
 - The dataset holds the latest status of each agreement, so later breaks and re-writes cannot be
   rewound by the drift stage.
 - Feature construction joins people, contacts and breaks in Python loops. A rough check on one

@@ -4,8 +4,8 @@ The bucket is defined by two clocks that disagree. A slip is *overdue* the day a
 date, but it is only *paid on time* if the money arrives within the grace period after that date.
 So a slip that fell due yesterday sits in the overdue-unpaid bucket today while still having
 ``grace_days - 1`` days left to be paid on time. It is right-censored: its outcome is not known
-yet. Counting it as lost inflates the bucket, and only for the most recent due dates, which is
-exactly the window a daily dashboard shows.
+yet. Counting it as lost inflates the bucket, and only for the most recent due dates, the ones a
+period that is still open (month to date) holds.
 
 This stage splits the bucket into
 

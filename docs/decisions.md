@@ -9,9 +9,9 @@ the *mature* cohort; the raw bucket is split into *still open* and *definitive*.
 
 **Why.** Overdue starts the day after the due date, but paid-on-time runs `grace_days` further, so
 the two clocks disagree for the most recent due dates. A bucket defined by "overdue and not paid on
-time" holds slips that can still be paid on time, and it inflates only for the open period, which
-is the one people look at daily. Closed periods agree exactly. The same pattern applies to any
-indicator that compares today with an outcome that has a grace period.
+time" holds slips that can still be paid on time, and it inflates only for the open period.
+Closed periods agree exactly. The same pattern applies to any indicator that compares today with an
+outcome that has a grace period.
 
 **Cost.** One more concept to explain, and a smaller denominator.
 
@@ -145,7 +145,7 @@ The pipeline cannot check it: a value does not say when it was read.
 
 **Why.** Original debt and the zero-balance flag are controls in the term model. A balance read after
 the agreement can already reflect payments, which would carry the outcome into the controls and
-flatter the model.
+make them look more predictive than they are.
 
 **Cost.** If you only keep a current balance, you need a snapshot view, or you read the odds ratios
 with those two controls marked as leakage-suspect.

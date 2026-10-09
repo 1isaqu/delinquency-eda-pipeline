@@ -5,12 +5,12 @@ profile, the target, numeric statistics, data-quality checks (with two deep dive
 and target leakage), cardinality, referential integrity, time coverage, correlation with the
 outcome, outliers, findings and recommendations.
 
-Nothing in the narrative is typed in advance. Every finding is a sentence built from numbers
-computed on the dataset at hand, and each row of the recommendation table appears only when a
-check on that dataset fired. One sentence of fixed advice (keep post-outcome columns out of a
-model) sits below the table because it holds for any data in the contract. The report never prints
-a column's example values or an identifier (agent, person, agreement). The one row-level table
-is the five largest first installments, shown without identifiers.
+No finding is typed in advance: each is a sentence built from numbers computed on the dataset at
+hand, and each row of the recommendation table appears only when a check on that dataset fired.
+Two fixed paragraphs sit below the table because they hold for any data in the contract: keep
+post-outcome columns out of a model, and the follow-up analyses worth running. The report never
+prints a column's example values or an identifier (agent, person, agreement). The one row-level
+table is the five largest first installments, shown without identifiers.
 
 Rates use the mature cohort (outcome final); see stage 05 for why.
 """
