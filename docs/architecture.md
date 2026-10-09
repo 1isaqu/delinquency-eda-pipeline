@@ -21,9 +21,9 @@
                  database                       reports/*.md  clean_*.csv
 ```
 
-`base` is the bridge: it is the only stage that turns database rows into the dataset file, and
-every offline stage starts from that file. That is what makes a run repeatable and lets you do the
-analysis on a machine that cannot reach the database.
+`base` is the only stage that turns database rows into the dataset file, and every offline stage
+starts from that file. That makes a run repeatable and lets you do the analysis on a machine that
+cannot reach the database.
 
 ## Layers
 

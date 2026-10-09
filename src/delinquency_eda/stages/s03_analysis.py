@@ -12,7 +12,7 @@ from non-payers. A factor can top the concentration table simply because it is b
 cohort is used for rates because a slip still inside its grace window is censored: it can still be
 paid on time, so counting it as a failure measures recency, not behavior.
 
-The follow-up factor is descriptive only. Outreach is aimed at people who are already slipping, so
+The follow-up factor is descriptive only. If outreach goes to people who are already slipping,
 follow-up and non-payment are entangled by reverse causality, and a higher unpaid rate among
 followed-up slips does not mean outreach hurts.
 """

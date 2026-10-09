@@ -2,8 +2,8 @@
 
 Everything here is known at (or before) the moment the agreement was made, except the follow-up
 counts, which describe what happened *between* the agreement and its due date. Follow-up columns
-are explanatory (stage 03) and are never model features (stage 10): outreach is aimed at people
-who are already slipping, so follow-up and non-payment are entangled by reverse causality.
+are explanatory (stage 03) and are never model features (stage 10): if outreach goes to people who
+are already slipping, follow-up and non-payment are entangled by reverse causality.
 """
 
 from __future__ import annotations
@@ -182,9 +182,9 @@ def mature_mask(df: pd.DataFrame, grace_days: int) -> pd.Series:
 # Measured after the agreement, so they must never feed a model that predicts the outcome. They
 # are kept in the cleaned table for audit (``paid_amount`` is what proves the outcome).
 LEAKAGE_COLUMNS = ("paid_amount", "paid_date", "days_overdue", "status_id", "status_label")
-# Describe what happened between agreement and due date. Useful for explanation, but outreach
-# targets people who are already slipping, so using them to predict non-payment confuses cause
-# and effect.
+# Describe what happened between agreement and due date. Useful for explanation, but if outreach
+# goes to people who are already slipping, using them to predict non-payment confuses cause and
+# effect.
 EXPLANATORY_ONLY_COLUMNS = (
     "contacts_total",
     "contacts_after",

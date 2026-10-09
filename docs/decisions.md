@@ -28,8 +28,8 @@ set is biased upward for payers.
 `derive.py` against `--as-of`, never with the server clock.
 
 **Why.** Reproducibility (same date, same file, byte for byte), replay (the drift stage re-derives
-the past), and one unit-tested place for the rule. A server clock makes every re-run a different
-experiment and every number impossible to reconcile later.
+the past), and one unit-tested place for the rule. With the server clock, each re-run uses a
+different date, so numbers from two runs cannot be reconciled.
 
 ## 4. Business filters run before the "latest row wins" ranking
 
@@ -89,7 +89,7 @@ whether a factor separates payers from non-payers, and a rate on a handful of sl
 **Decision.** Contact counts between agreement and due date appear in the analysis and are excluded
 from the model.
 
-**Why.** Outreach is aimed at people who are already slipping. More follow-up with more non-payment
+**Why.** If outreach goes to people who are already slipping, more follow-up with more non-payment
 is reverse causality. Using it to predict non-payment confuses cause and effect.
 
 ## 11. Group by person, validate by time
@@ -98,8 +98,8 @@ is reverse causality. Using it to predict non-payment confuses cause and effect.
 hold-out is the second check.
 
 **Why.** Rows of one person are not independent. A random split leaks people across train and test
-and inflates the score. The grouped folds catch leakage between people and the time hold-out
-catches drift; each misses what the other finds.
+and inflates the score. The grouped folds catch leakage between people, and the time hold-out
+catches drift.
 
 ## 12. Odds ratios as coefficient differences against a stated reference
 

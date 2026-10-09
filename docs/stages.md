@@ -83,9 +83,8 @@ with filters applied before the ranking; excluded-agent patterns applied inside 
 portfolio label per agreement through a single top-one lookup; bound dates. Whole-agreement value
 and installment count are aggregated per agreement from each installment's latest row; original
 debt is the sum of the balances of the linked debts, which the contract defines as of the agreement
-date. The file holds whatever keys and agent ids
-your database supplies: keep it out of version control (the default `data/` path is
-gitignored).
+date. The file holds whatever keys and agent ids your database supplies: keep it out of version
+control (the default `data/` path is gitignored).
 
 ## 03 `analysis`: which factors separate payers from non-payers?
 
@@ -109,7 +108,7 @@ Bands come from the settings. The report also shows the same bucket under three 
 (first installment, whole agreement, original debt), because a headline figure sums one of them and
 they can differ a lot.
 
-Follow-up is descriptive only. Outreach targets people who are already slipping, so more
+Follow-up is descriptive only. If outreach goes to people who are already slipping, more
 follow-up going with more non-payment is reverse causality, not evidence that outreach hurts.
 
 ## 04 `drift`: which slips moved?
@@ -167,8 +166,8 @@ nothing but the report. It does not validate identifier formats.
 | R7 `is_mature` | the outcome is final; models train on mature rows only |
 
 Outliers are kept: a winsorized value would erase the large slips, which weigh the most in any
-value total. `clean_full.csv` has every row; `clean_analytic.csv` drops the flagged
-system rows. The report ends with an information-loss summary: rows removed, cells imputed, columns
+value total. `clean_full.csv` has every row; `clean_analytic.csv` drops the flagged system rows.
+The report ends with an information-loss summary: rows removed, cells imputed, columns
 removed (all zero), columns added, rows flagged, and how far the baseline moved.
 
 ## 09 `card`: the summary card with a maturity cut
@@ -186,14 +185,14 @@ two agree. All periods come from one fetch (`--as-of` sets the date) or from the
 The analysis stage reports the term, the days the agent grants between the agreement and the
 first due date, as one factor among others. Reading its unpaid rate at face value invites the
 objection of confounding: agents, portfolios and ticket sizes differ, and longer terms may sit
-with the riskier mix. The question here is narrow: *given the same
-mix, is a longer term still associated with more non-payment?*
+with the riskier mix. The question here is narrow: *given the same mix, is a longer term still
+associated with more non-payment?*
 
 | Choice | Why |
 |---|---|
 | Mature, non-system rows only | the label needs a final outcome |
 | Features known when the term is agreed | no leakage: payment amount and date, days overdue and status are out; the debt balance counts only if it was read as of the agreement (data contract) |
-| No follow-up counts | outreach targets people already slipping: reverse causality |
+| No follow-up counts | reverse causality: if outreach goes to people already slipping, follow-up goes with non-payment |
 | Cross-validation grouped by person | rows of one person are not independent; a row split leaks people across folds |
 | Temporal hold-out | train on early agreements, test on late ones: the second validation |
 | Logistic model and gradient boosting | a transparent model for the effect, a flexible one to see if interactions matter |

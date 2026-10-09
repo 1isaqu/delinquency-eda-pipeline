@@ -1,12 +1,12 @@
 # Delinquency EDA Pipeline
 
-A numbered, reproducible analysis pipeline for overdue-unpaid receivables. Eleven command-line
-stages take you from "which date window is this dashboard card using?" to a payment-term model that
-asks whether the term a collector grants still matters once the portfolio, agent and ticket mix are
-held fixed: period selection, schema discovery, a repeatable dataset build, factor analysis, drift
-replay, a censoring check, an EDA report generator, cleaning diagnostics, additive cleaning, a
-corrected summary card and the model. Everything reads a documented, generic data contract, so you
-connect your own database and no data ships with the code.
+A numbered, reproducible analysis pipeline for overdue-unpaid receivables. It has eleven
+command-line stages: period selection, schema discovery, a repeatable dataset build, factor
+analysis, drift replay, a censoring check, an EDA report generator, cleaning diagnostics, additive
+cleaning, a corrected summary card, and a payment-term model that asks whether the term a collector
+grants still matters once the portfolio, agent and ticket mix are held fixed. Everything reads a
+documented, generic data contract, so you connect your own database and no data ships with the
+code.
 
 ## What it does
 
@@ -23,8 +23,8 @@ Most of the code is about counting the overdue-unpaid bucket correctly:
   since, and which value measure (first installment, whole agreement, original debt) a headline
   figure actually sums.
 - Columns measured after the outcome are listed and excluded from the model (leakage). Follow-up
-  counts are descriptive only, because outreach targets people who are already slipping (reverse
-  causality).
+  counts are descriptive only: if outreach goes to people who are already slipping, follow-up and
+  non-payment are entangled (reverse causality).
 - Rows of one person are not independent, so cross-validation is grouped by an opaque person key
   and a temporal hold-out is the second check.
 - Cleaning adds flags, derived columns and a composite key. It deletes no rows and imputes no
@@ -52,8 +52,8 @@ Most of the code is about counting the overdue-unpaid bucket correctly:
                database                             reports/*.md  clean_*.csv
 ```
 
-`base` is the bridge: it is the only stage that turns database rows into the dataset file, and every
-offline stage starts from that file. More in [docs/architecture.md](docs/architecture.md).
+`base` is the only stage that turns database rows into the dataset file, and every offline stage
+starts from that file. More in [docs/architecture.md](docs/architecture.md).
 
 ## Quick start
 
