@@ -9,7 +9,8 @@ Nothing in the narrative is typed in advance. Every finding is a sentence built 
 computed on the dataset at hand, and each row of the recommendation table appears only when a
 check on that dataset fired. One sentence of fixed advice (keep post-outcome columns out of a
 model) sits below the table because it holds for any data in the contract. The report never prints
-example values from a column, so it carries no row-level content.
+a column's example values or an identifier (agent, person, agreement). The one row-level table
+is the five largest first installments, shown without identifiers.
 
 Rates use the mature cohort (outcome final); see stage 05 for why.
 """
@@ -165,8 +166,7 @@ def categorical_summary(df: pd.DataFrame) -> pd.DataFrame:
             {
                 "column": column,
                 "distinct": int(df[column].nunique(dropna=True)),
-                "mode": str(counts.index[0]) if len(counts) else "",
-                "% in mode": 100 * counts.iloc[0] / len(df) if len(counts) else 0.0,
+                "% in most frequent value": 100 * counts.iloc[0] / len(df) if len(counts) else 0.0,
             }
         )
     return pd.DataFrame(rows)
@@ -590,7 +590,10 @@ def recommendations(
             "log1p before a linear model; trees do not need it",
         ),
         (
-            rare_categories(df["agent_id"], settings.rare_category_min_n)[1] > 0,
+            any(
+                rare_categories(df[c], settings.rare_category_min_n)[1] > 0
+                for c in ("agent_id", "portfolio_label")
+            ),
             "rare agents and portfolios",
             "group the tail (portfolio group, not 'other'); show n and a sample-size flag",
         ),
@@ -606,8 +609,9 @@ def recommendations(
         ),
         (
             df["product_line"].nunique() > 1,
-            "product lines",
-            "model them separately or interact with them: their populations differ",
+            "more than one product line",
+            "compare their unpaid rates (stage 03); model them separately or interact with the "
+            "line if the rates differ",
         ),
     ]
     return [(what, action) for ok, what, action in rules if ok]
