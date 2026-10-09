@@ -2,7 +2,7 @@
 
 Everything here is known at (or before) the moment the agreement was made, except the follow-up
 counts, which describe what happened *between* the agreement and its due date. Follow-up columns
-are explanatory (stage 03) and are never model features (stage 10): the operation calls the people
+are explanatory (stage 03) and are never model features (stage 10): outreach is aimed at people
 who are already slipping, so follow-up and non-payment are entangled by reverse causality.
 """
 

@@ -42,9 +42,10 @@ same date builds the same dataset byte for byte.
 
 ## 00 `period`: which window reproduces the funnel?
 
-A summary card may not say which window it used: month to date up to today or up to yesterday? the
-whole previous month? This stage evaluates the funnel `generated = paid_on_time + overdue_unpaid +
-to_mature` over candidate windows and ranks them by closeness to the counts you already have.
+Use this stage when a summary card does not say which window it covers: month to date up to today
+or up to yesterday, or the whole previous month? It evaluates the funnel
+`generated = paid_on_time + overdue_unpaid + to_mature` over candidate windows and ranks them by
+closeness to the counts you already have.
 
 - Slips are fetched once over the widest span; every window is evaluated in Python, so adding a
   candidate is free.
@@ -136,9 +137,10 @@ checks with severities, two deep dives (a zero balance is a value, not a gap; ta
 cardinality with rare categories, referential integrity between the four tables, monthly coverage
 with a stability verdict, Spearman correlation with non-payment (leaking columns flagged), IQR
 outliers, findings, recommendations and limits. Every finding is a sentence built from numbers
-computed on the dataset at hand. Each row of the recommendation table appears only when a check
-on that dataset fired (for example, the term row needs a long right tail in days to the first due date). One line
-of fixed advice sits below the table: keep columns measured after the outcome out of a model.
+computed on the dataset at hand. Each row of the recommendation table appears only when a check on
+that dataset fired (for example, the term row needs a long right tail in days to the first due
+date). One line of fixed advice sits below the table: keep columns measured after the outcome out of
+a model.
 
 ## 07 `diagnose`: cleaning diagnostics (report only)
 
@@ -206,5 +208,6 @@ term's effect isolated from the mix.
 
 Read it as an association measured under control, not as proof that changing the term changes
 behavior: people who ask for a long term may already be the people who cannot pay. A randomized
-term is the only design that would settle that. A modest AUC does not argue against a real term
-effect: the model measures an effect, it does not score people. Models are fitted in memory and never saved.
+term is the only design that would settle that. The model measures an effect under control and is
+not a scoring tool, so read the odds ratios and the counterfactual rather than the AUC alone. Models
+are fitted in memory and never saved.
