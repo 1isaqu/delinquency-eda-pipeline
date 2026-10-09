@@ -22,7 +22,7 @@ Most of the code is about counting the overdue-unpaid bucket correctly:
   Stage 04 can replay the past from the dataset alone.
 - Stage 00 finds the window that reproduces a card you were shown. Stage 04 finds which slips moved
   since, and which value measure (first installment, whole agreement, original debt) a headline
-  figure actually sums.
+  figure sums.
 - Columns measured after the outcome are listed and excluded from the model (leakage). Follow-up
   counts are descriptive only: if outreach goes to people who are already slipping, follow-up and
   non-payment are entangled (reverse causality).
@@ -141,6 +141,20 @@ tiers of data (synthetic demo, public datasets, your own data).
    export DEA_DB_SCHEMA=reporting
    ```
 
+   The same in PowerShell:
+
+   ```powershell
+   python -m pip install -e ".[sqlserver]"
+   $env:DEA_BACKEND = "sqlserver"
+   $env:DEA_SOURCES = "auto=your_database_one,consumer=your_database_two"
+   $env:DEA_DB_HOST = "db.example.invalid"
+   $env:DEA_DB_USER = "report_reader"
+   $env:DEA_DB_PASSWORD = "change-me"
+   $env:DEA_DB_SCHEMA = "reporting"
+   ```
+
+   On any shell you can instead fill in a copy of `.env.example` and pass `--env-file .env`.
+
    Use a login that only has read permission. The pipeline also refuses any statement that is not a
    single `SELECT` or `WITH ... SELECT`. That guard catches mistakes in the pipeline's own SQL;
    access control still has to come from a read-only login.
@@ -174,8 +188,7 @@ Connection settings come from environment variables only (a `.env`-style file ca
 | `DEA_DB_QUERY_TIMEOUT` | `120` | seconds |
 
 Rules and thresholds live in the JSON settings file. Every default below is invented so the demo
-and the tests run. None is a recommendation; calibrate each on your own data. Unknown keys are an
-error, not silently ignored.
+and the tests run; calibrate each on your own data. Unknown keys are an error.
 
 | Setting | Default | Meaning |
 |---|---|---|
@@ -262,28 +275,33 @@ tests/                              pytest suite
 
 ## Key design decisions
 
-The reasoning is in [docs/decisions.md](docs/decisions.md). In brief: treat the unpaid bucket as
-censored and cut by maturity; make maturity depend on the due date only; derive outcomes from a
-date the caller sets; run business filters before the latest-row-wins ranking; resolve statuses by label
-and keys by composite; take one portfolio label per agreement with a top-one lookup; keep a zero
-balance and a missing debt apart; only add in cleaning; separate concentration from discrimination;
-keep follow-up out of the model; read the debt balance as of the agreement; group by person and
-validate by time; compare term bands against a stated reference; and say that all of it is
-observational.
+The reasoning for each is in [docs/decisions.md](docs/decisions.md).
+
+- The unpaid bucket is censored, so rates use the mature cohort, and maturity depends on the due
+  date only.
+- Outcomes are derived in Python against a date the caller sets.
+- The extraction runs business filters before the latest-row-wins ranking, resolves statuses by
+  label, keys agreements by a composite, and takes one portfolio label per agreement with a top-one
+  lookup.
+- A zero balance and a missing debt stay apart, and cleaning only adds.
+- Concentration and discrimination are separate tables.
+- Follow-up stays out of the model, and the debt balance is read as of the agreement.
+- Validation groups by person and holds out by time. Term bands are compared against a stated
+  reference band.
+- The analysis and model reports call their results associations.
 
 ## Limitations
 
 - SQL Server is not exercised against a live server. The SQL Server adapter and dialect are tested
   through a fake DB-API connection and by inspecting the generated T-SQL (hints, top-one lookup,
   bound dates, parameter order). The extraction SQL runs end to end only on SQLite.
-- The suite was run locally on Python 3.14, and CI runs and passes on 3.10, 3.12 and 3.14.
-  `requires-python` says 3.10.
-- Every default setting is invented. Grace period, bands, status labels, exclusion patterns and the
-  reliability floors are placeholders so the demo runs. They are not benchmarks.
-- The demo generator is arbitrary too. Every constant in it (line sizes, ticket scales, zero-balance
-  shares, payment-model coefficients) is a hand-picked value, not fitted to or derived from any
-  dataset. It plants effects so each stage has something to find, and their sizes are not a finding
-  about any real operation.
+- CI runs the suite on Python 3.10, 3.12 and 3.14. `requires-python` is `>=3.10`, so 3.11 and 3.13
+  install but are not in the CI matrix.
+- The default settings (grace period, bands, status labels, exclusion patterns, reliability floors)
+  are placeholders so the demo runs. The demo generator is arbitrary too: every constant in it (line
+  sizes, ticket scales, zero-balance shares, payment-model coefficients) is a hand-picked value, not
+  fitted to or derived from any dataset. It plants effects so each stage has something to find, and
+  their sizes are not a finding about any real operation.
 - The pipeline cannot tell when a debt balance was read. The contract asks for the balance as of the
   agreement date; with a later balance, the original-debt and zero-balance controls of the model
   can leak the outcome.
