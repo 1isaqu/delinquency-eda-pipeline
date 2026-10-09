@@ -271,7 +271,7 @@ class LineBuilder:
         """Decide payment for the first installment. Returns (paid_at, status)."""
         rng = self.rng
         ticket = max(first / self.spec.ticket_scale, 1e-3)
-        logit = -2.60 + 0.22 * term + 0.55 * math.log1p(prior) - 0.15 * math.log(ticket)
+        logit = -2.60 + 0.22 * term + 0.55 * math.log1p(prior) - 0.20 * math.log(ticket)
         unpaid = rng.random() < sigmoid(logit + agent["effect"])
         if agent["login"] == "batch_loader":
             unpaid = True
