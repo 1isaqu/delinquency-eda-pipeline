@@ -17,7 +17,7 @@ stage doing something:
 Every constant in this file (line sizes, ticket scales, zero-balance shares, the coefficients of
 the payment model) is an arbitrary value picked by hand so that each effect is visible in a few
 thousand rows. None is fitted to, or derived from, any dataset, and the effect sizes mean nothing
-outside the demo.
+outside the demo. docs/data-sources.md lists them.
 """
 
 from __future__ import annotations

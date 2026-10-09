@@ -102,7 +102,8 @@ The demo plants situations the stages should find: a term effect on payment, sli
 their grace window, a pseudo-agent that passes the default exclusion patterns and never collects,
 re-written installments, repeat debtors, and ids that repeat across the two product lines. Every
 constant in the generator is an arbitrary hand-picked value, so the effect sizes mean nothing
-outside the demo.
+outside the demo. [docs/data-sources.md](docs/data-sources.md) lists the constants and the three
+tiers of data (synthetic demo, public datasets, your own data).
 
 ## Connect your own data
 
@@ -210,7 +211,7 @@ error, not silently ignored.
 
 | # | Command | What it computes, and why |
 |--:|---|---|
-| 00 | `period` | The funnel (generated, paid on time, overdue unpaid, to mature) over candidate date windows from one fetch, ranked by closeness to counts you already have. A card may not say which window it used. |
+| 00 | `period` | The funnel (generated, paid on time, overdue unpaid, to mature) over candidate date windows from one fetch, ranked by closeness to counts you already have. Use it when a card does not say which window it covers. |
 | 01 | `schema` | Which contract tables and columns exist, their types, and whether configured status labels are in the catalog. Run first against a new database. |
 | 02 | `base` | The dataset bundle: first-installment slips with derived outcomes, the debtor rows of the same people, outreach events, and earlier broken agreements. Everything after it is offline. |
 | 03 | `analysis` | Per factor, concentration of the unpaid value and discrimination of the unpaid rate on the mature cohort, with lift and sample-size flags. |
@@ -264,8 +265,9 @@ censored and cut by maturity; make maturity depend on the due date only; derive 
 explicit date; run business filters before the latest-row-wins ranking; resolve statuses by label
 and keys by composite; take one portfolio label per agreement with a top-one lookup; keep a zero
 balance and a missing debt apart; only add in cleaning; separate concentration from discrimination;
-keep follow-up out of the model; group by person and validate by time; compare term bands against a
-stated reference; and say that all of it is observational.
+keep follow-up out of the model; read the debt balance as of the agreement; group by person and
+validate by time; compare term bands against a stated reference; and say that all of it is
+observational.
 
 ## Limitations
 
@@ -285,8 +287,8 @@ stated reference; and say that all of it is observational.
   can leak the outcome.
 - The model measures an association under control. Nothing here shows that changing a term changes
   behavior, and the data has no field for why a slip was not paid.
-- A modest AUC does not argue against a real term effect. The model measures an effect; it is not a
-  scoring tool.
+- The model is not a scoring tool. Read its odds ratios and the counterfactual rather than the AUC
+  alone.
 - The dataset holds the latest status of each agreement, so later breaks and re-writes cannot be
   rewound by the drift stage.
 - Feature construction joins people, contacts and breaks in Python loops. A local check built the
