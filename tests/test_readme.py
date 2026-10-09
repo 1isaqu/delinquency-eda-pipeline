@@ -141,6 +141,24 @@ def test_the_layout_block_only_names_files_and_folders_that_exist():
         assert name.rstrip("/") in existing, name
 
 
+MARKDOWN_PAGES = ["README.md", *sorted(f"docs/{p.name}" for p in (ROOT / "docs").glob("*.md"))]
+
+
+@pytest.mark.parametrize("page", MARKDOWN_PAGES)
+def test_every_table_row_has_as_many_cells_as_its_header(page):
+    """GitHub splits a cell at every unescaped pipe, inside backticks too."""
+    header, fenced = None, False
+    for number, line in enumerate((ROOT / page).read_text(encoding="utf-8").splitlines(), 1):
+        text = line.strip()
+        fenced ^= text.startswith("```")
+        if fenced or not text.startswith("|"):
+            header = None
+            continue
+        cells = len(re.split(r"(?<!\\)\|", text.strip("|")))
+        header = header or cells
+        assert cells == header, f"{page}:{number} has {cells} cells, its header {header}"
+
+
 @pytest.mark.parametrize(
     "page", ["architecture", "data-contract", "data-sources", "stages", "decisions", "glossary"]
 )

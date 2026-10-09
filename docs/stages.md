@@ -161,7 +161,7 @@ nothing but the report. It does not validate identifier formats.
 | R2 `zero_balance` | flags a zero original debt; the installment ratio stays `NaN`; nothing is imputed |
 | R3 leakage | lists columns measured after the outcome (`paid_amount`, `paid_date`, `days_overdue`, `status_id`, `status_label`) and the explanatory-only follow-up columns in `clean_meta.json`; keeps them for audit |
 | R4 `portfolio_group` | the label without its trailing sequence token (`portfolio_group_pattern`); the original stays |
-| R5 `agreement_key` | `product_line|agreement_id|portfolio_id`, asserted unique; a row id alone collides across product lines |
+| R5 `agreement_key` | `product_line\|agreement_id\|portfolio_id`, asserted unique; a row id alone collides across product lines |
 | R6 `group_key` | the person key, or the debtor row when a slip has none, the unit to split on; keyless slips never pool |
 | R7 `is_mature` | the outcome is final; models train on mature rows only |
 
