@@ -61,7 +61,7 @@ def ratio_state(original_debt: float | None) -> str:
 
 
 def portfolio_group(label: str | None, pattern: str) -> str:
-    """The portfolio label without its trailing sequence token (``Bank A II`` -> ``Bank A``)."""
+    """The label without its trailing sequence number (``Portfolio A-02`` -> ``Portfolio A``)."""
     if label is None or (isinstance(label, float) and np.isnan(label)) or not str(label).strip():
         return NO_PORTFOLIO
     stripped = re.sub(pattern, "", str(label).strip())

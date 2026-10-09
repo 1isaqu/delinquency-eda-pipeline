@@ -16,7 +16,7 @@
   "stability_range_pp": 10.0,
   "rare_category_min_n": 25,
   "outlier_iqr_k": 3.0,
-  "portfolio_group_pattern": "[\\s-]+(?:[IVXLCDM]+|\\d+)$",
+  "portfolio_group_pattern": "[\\s-]+\\d+$",
   "suspect_agent_pattern": "system|robot|bot|batch|auto|test|import",
   "model": {
     "folds": 5,

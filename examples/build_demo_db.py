@@ -72,14 +72,14 @@ RESULTS = [
 ]
 RESULT_WEIGHTS = [0.45, 0.15, 0.20, 0.10, 0.10]
 PORTFOLIOS = [
-    "Bank A I",
-    "Bank A II",
-    "Bank A III",
-    "Bank B I",
-    "Bank B II",
-    "Bank C 01",
-    "Bank C 02",
-    "Bank D I",
+    "Portfolio A-01",
+    "Portfolio A-02",
+    "Portfolio A-03",
+    "Portfolio B-01",
+    "Portfolio B-02",
+    "Portfolio C-01",
+    "Portfolio C-02",
+    "Portfolio D-01",
 ]
 GRACE = 3  # the generator pays "on time" within this many days after the due date
 

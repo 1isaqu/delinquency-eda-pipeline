@@ -73,7 +73,13 @@ DEBTS = [
     (4, 1, "C-4", 800.0, "2026-01-01", 60),
     (5, 1, "C-5", 250.0, "2026-01-01", 60),
 ]
-DEBT_ATTRIBUTES = [(1, "Bank A I"), (2, "Bank A II"), (3, "Bank B I"), (4, None), (5, "Bank C 02")]
+DEBT_ATTRIBUTES = [
+    (1, "Portfolio A-01"),
+    (2, "Portfolio A-02"),
+    (3, "Portfolio B-01"),
+    (4, None),
+    (5, "Portfolio C-02"),
+]
 LINKS = [
     (101, 1, 1),
     (102, 1, 3),  # inserted before debt 2 on purpose: the lowest debt_id must still be chosen
@@ -141,7 +147,7 @@ def make_second_line(path: Path) -> Path:
     )
     connection.executemany("INSERT INTO agents VALUES (?, ?, ?)", AGENTS[:2])
     connection.executemany("INSERT INTO debts VALUES (?, ?, ?, ?, ?, ?)", DEBTS[:1])
-    connection.executemany("INSERT INTO debt_attributes VALUES (?, ?)", [(1, "Bank D 07")])
+    connection.executemany("INSERT INTO debt_attributes VALUES (?, ?)", [(1, "Portfolio D-07")])
     connection.executemany("INSERT INTO agreement_debts VALUES (?, ?, ?)", [(101, 1, 1)])
     connection.executemany("INSERT INTO debtors VALUES (?, ?)", [(1, "pk_alpha")])
     connection.executemany("INSERT INTO contact_results VALUES (?, ?, ?, ?)", RESULTS)

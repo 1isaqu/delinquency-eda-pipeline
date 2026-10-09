@@ -193,7 +193,7 @@ error, not silently ignored.
 | `stability_range_pp` | `10.0` | spread across months, in points, from which pooling months is flagged |
 | `rare_category_min_n` | `25` | below this a category counts as rare |
 | `outlier_iqr_k` | `3.0` | width of the IQR fence |
-| `portfolio_group_pattern` | `[\s-]+(?:[IVXLCDM]+\|\d+)$` | trailing sequence token removed to get the portfolio group |
+| `portfolio_group_pattern` | `[\s-]+\d+$` | trailing sequence token removed to get the portfolio group |
 | `suspect_agent_pattern` | `system\|robot\|bot\|batch\|auto\|test\|import` | agents flagged by the diagnostics as possible system accounts |
 | `model.folds` | `5` | grouped cross-validation folds |
 | `model.random_state` | `42` | seed for folds, boosting and permutation importance |

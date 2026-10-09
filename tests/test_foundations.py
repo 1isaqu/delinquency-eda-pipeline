@@ -127,6 +127,23 @@ def test_settings_reject_unknown_and_invalid_values():
         Settings.from_mapping({"model": {"folds": 1}})
 
 
+@pytest.mark.parametrize(
+    ("label", "group"),
+    [
+        ("Portfolio A-01", "Portfolio A"),
+        ("Portfolio A 02", "Portfolio A"),
+        ("Portfolio B", "Portfolio B"),
+        ("-07", "-07"),
+        ("  ", "(no portfolio)"),
+        (None, "(no portfolio)"),
+    ],
+)
+def test_default_portfolio_group_pattern_strips_a_trailing_number(label, group):
+    from delinquency_eda.features import portfolio_group
+
+    assert portfolio_group(label, Settings().portfolio_group_pattern) == group
+
+
 def test_settings_from_file(tmp_path):
     path = tmp_path / "settings.json"
     path.write_text(json.dumps({"grace_days": 9}), encoding="utf-8")

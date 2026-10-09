@@ -13,8 +13,8 @@ Terms and field names used in the code, reports and settings.
 | Generated agreement | An agreement whose status is in `generated_status_labels`: the population in scope. |
 | Broken / auto-broken agreement | An agreement that ended broken (by hand or by the system after a grace overflow). Earlier ones count as a person's break history. |
 | Exception (pending approval) | A status awaiting approval. Not in the generated set by default, so it is not extracted. |
-| Portfolio | A group of debts with one label, for example `Bank A II`. |
-| Portfolio group | The label without its trailing sequence token (`Bank A`), used to avoid one category per sequence. |
+| Portfolio | A group of debts with one label, for example `Portfolio A-02`. |
+| Portfolio group | The label without its trailing sequence token (`Portfolio A`), used to avoid one category per sequence. |
 | Agent | The user who owns an agreement. |
 | Outreach attempt | One contact event. |
 | Answered | Someone picked up. |

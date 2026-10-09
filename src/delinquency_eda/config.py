@@ -78,7 +78,7 @@ class Settings:
     stability_range_pp: float = 10.0
     rare_category_min_n: int = 25
     outlier_iqr_k: float = 3.0
-    portfolio_group_pattern: str = r"[\s-]+(?:[IVXLCDM]+|\d+)$"
+    portfolio_group_pattern: str = r"[\s-]+\d+$"
     suspect_agent_pattern: str = r"system|robot|bot|batch|auto|test|import"
 
     model: ModelSettings = field(default_factory=ModelSettings)

@@ -188,10 +188,11 @@ def test_declared_plan_is_kept_apart_from_generated_installments(world):
 
 def test_portfolio_label_is_the_lowest_debt_id_with_a_label(world):
     rows = slips(world)
-    assert rows[102]["portfolio_label"] == "Bank A II"  # debt 2, though debt 3 was linked first
+    # debt 2 wins, though debt 3 was linked first
+    assert rows[102]["portfolio_label"] == "Portfolio A-02"
     assert rows[103]["portfolio_label"] is None  # its only debt has no label
     assert rows[109]["portfolio_label"] is None  # no linked debt at all
-    assert rows[101]["portfolio_label"] == "Bank A I"
+    assert rows[101]["portfolio_label"] == "Portfolio A-01"
 
 
 def test_original_debt_distinguishes_no_link_from_zero_balance(world):

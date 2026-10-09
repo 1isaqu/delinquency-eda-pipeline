@@ -34,7 +34,7 @@ def raw(i: int = 1, **overrides: Any) -> dict[str, Any]:
         "agent_id": "a1",
         "agent_name": "Agent 01",
         "agent_login": "agent_01",
-        "portfolio_label": "Bank A I",
+        "portfolio_label": "Portfolio A-01",
         "agreement_date": "2026-03-01",
         "due_date": "2026-03-10",
         "paid_amount": None,

@@ -92,7 +92,7 @@ with no link has an *unknown* original debt (not zero).
 | Column | Type | Null | Meaning |
 |---|---|---|---|
 | `debt_id` | integer | no | Key. |
-| `portfolio_label` | text | yes | Human label such as `Bank A II`. Free text. |
+| `portfolio_label` | text | yes | Human label such as `Portfolio A-02`. Free text. |
 
 The label hangs off the debt, not the agreement. The pipeline takes one label per agreement (the
 lowest `debt_id` that has one) so a join can never multiply rows.

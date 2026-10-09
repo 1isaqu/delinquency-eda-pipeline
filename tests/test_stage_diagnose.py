@@ -22,7 +22,7 @@ def frame(rows, **kwargs):
 
 
 def test_text_normalization_folds_case_accents_and_spacing():
-    assert normalize_text("  Bánk   A\tI ") == "bank a i"
+    assert normalize_text("  Pörtfolio   A-01\t") == "portfolio a-01"
     assert normalize_text("Façade") == "facade"
     assert normalize_text("Straße") == "strasse"
 
@@ -34,8 +34,11 @@ def test_whitespace_and_control_characters_are_counted_per_column():
 
 
 def test_truncation_needs_several_different_values_at_the_maximum_length():
-    cut = [raw(1, portfolio_label="Bank AAAAAAA"), raw(2, portfolio_label="Bank BBBBBBB")]
-    repeated = [raw(3, portfolio_label="Bank CCCCCCC"), raw(4, portfolio_label="Bank CCCCCCC")]
+    cut = [raw(1, portfolio_label="Portfolio AAAAAAA"), raw(2, portfolio_label="Portfolio BBBBBBB")]
+    repeated = [
+        raw(3, portfolio_label="Portfolio CCCCCCC"),
+        raw(4, portfolio_label="Portfolio CCCCCCC"),
+    ]
     suspicious = D.truncation_suspects(frame(cut)).set_index("column")
     assert bool(suspicious.loc["portfolio_label", "suspect"])
     benign = D.truncation_suspects(frame(repeated)).set_index("column")
@@ -90,10 +93,10 @@ def test_missing_table_only_lists_base_columns_with_nulls():
 
 def test_values_that_differ_only_in_form_are_grouped():
     rows = [
-        raw(1, portfolio_label="Bank A I"),
-        raw(2, portfolio_label="bank a i "),
-        raw(3, portfolio_label="Bánk A I"),
-        raw(4, portfolio_label="Bank B I"),
+        raw(1, portfolio_label="Portfolio A-01"),
+        raw(2, portfolio_label="portfolio a-01 "),
+        raw(3, portfolio_label="Pörtfolio A-01"),
+        raw(4, portfolio_label="Portfolio B-01"),
     ]
     variants = D.form_variants(frame(rows))
     assert len(variants["portfolio_label"]) == 1
