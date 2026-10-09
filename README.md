@@ -123,7 +123,8 @@ outside the demo.
    | `contact_results` | contact result | `result_id`, `label`, `answered`, `right_party` |
 
    `installment_no = 0` is the first installment, the one the pipeline analyzes. A missing payment
-   is `NULL`, never `0`.
+   is `NULL`, never `0`. `debts.balance` must be the balance as of the agreement date: a balance
+   read later can already reflect payments and would leak the outcome into the model's controls.
 2. Install the SQL Server extra and configure the connection with environment variables only
    (copy `.env.example`; never commit the real file):
 
@@ -279,6 +280,9 @@ stated reference; and say that all of it is observational.
   shares, payment-model coefficients) is a hand-picked value, not fitted to or derived from any
   dataset. It plants effects so each stage has something to find, and their sizes are not a finding
   about any real operation.
+- The pipeline cannot tell when a debt balance was read. The contract asks for the balance as of the
+  agreement date; with a later balance, the original-debt and zero-balance controls of the model
+  can leak the outcome.
 - The model measures an association under control. Nothing here shows that changing a term changes
   behavior, and the data has no field for why a slip was not paid.
 - A modest AUC does not argue against a real term effect. The model measures an effect; it is not a

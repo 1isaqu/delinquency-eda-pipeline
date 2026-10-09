@@ -88,8 +88,16 @@ with no link has an *unknown* original debt (not zero).
 | Column | Type | Null | Meaning |
 |---|---|---|---|
 | `debt_id` | integer | no | Key. |
-| `balance` | numeric | yes | Current balance. A balance of zero is a real value and is kept apart from a missing link. |
+| `balance` | numeric | yes | Balance as of the agreement date: what the debt carried when the term was agreed. A balance of zero is a real value and is kept apart from a missing link. |
 | `portfolio_id`, `contract_no`, `due_at`, `days_overdue` | various | yes | Optional, not read. |
+
+The date matters. Original debt (the sum of the linked balances) and the zero-balance flag are
+controls in the payment-term model, which may only use what was known when the term was agreed. A
+balance read at extraction time can already reflect payments made after the agreement, so it can
+carry the outcome into those controls. The pipeline cannot detect that from the data. If your
+database keeps only a current balance, map `balance` to a value that was fixed at the agreement
+(a snapshot, or the amount the debt carried when it was agreed). Otherwise treat the original-debt
+and zero-balance controls of stage 10 as leakage-suspect when you read its odds ratios.
 
 ### `debt_attributes`: holds the portfolio label
 

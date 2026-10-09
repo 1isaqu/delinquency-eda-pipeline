@@ -98,8 +98,8 @@ is reverse causality. Using it to predict non-payment confuses cause and effect.
 hold-out is the second check.
 
 **Why.** Rows of one person are not independent. A random split leaks people across train and test
-and inflates the score. A model that holds out in time but not across folds, or the reverse, is
-only half validated.
+and inflates the score. The grouped folds catch leakage between people and the time hold-out
+catches drift; each misses what the other finds.
 
 ## 12. Odds ratios as coefficient differences against a stated reference
 
@@ -136,3 +136,15 @@ cleaned tables are written under gitignored paths. Models are fitted in memory a
 
 **Why.** The repository holds code only. A dataset file carries whatever identifiers your database
 supplies, so the default location is ignored and the README says to keep it out of version control.
+
+## 16. The debt balance is the balance as of the agreement
+
+**Decision.** The contract defines `debts.balance` as what the debt carried on the agreement date.
+The pipeline cannot check it: a value does not say when it was read.
+
+**Why.** Original debt and the zero-balance flag are controls in the term model. A balance read after
+the agreement can already reflect payments, which would carry the outcome into the controls and
+flatter the model.
+
+**Cost.** If you only keep a current balance, you need a snapshot view, or you read the odds ratios
+with those two controls marked as leakage-suspect.

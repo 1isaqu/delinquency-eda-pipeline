@@ -80,7 +80,8 @@ Rules the SQL follows (details in `docs/decisions.md`): read only; latest row wi
 with filters applied before the ranking; excluded-agent patterns applied inside the SQL; one
 portfolio label per agreement through a single top-one lookup; bound dates. Whole-agreement value
 and installment count are aggregated per agreement from each installment's latest row; original
-debt is the sum of the balances of the linked debts. The file holds whatever keys and agent ids
+debt is the sum of the balances of the linked debts, which the contract defines as of the agreement
+date. The file holds whatever keys and agent ids
 your database supplies: keep it out of version control (the default `data/` path is
 gitignored).
 
@@ -188,7 +189,7 @@ mix, is a longer term still associated with more non-payment?*
 | Choice | Why |
 |---|---|
 | Mature, non-system rows only | the label needs a final outcome |
-| Features known when the term is agreed | no leakage: payment amount and date, days overdue and status are out |
+| Features known when the term is agreed | no leakage: payment amount and date, days overdue and status are out; the debt balance counts only if it was read as of the agreement (data contract) |
 | No follow-up counts | outreach targets people already slipping: reverse causality |
 | Cross-validation grouped by person | rows of one person are not independent; a row split leaks people across folds |
 | Temporal hold-out | train on early agreements, test on late ones: the second validation |

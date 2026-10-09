@@ -10,7 +10,9 @@ Constraints the earlier stages impose, all respected here:
 
 * **labels need maturity**: only mature slips (final outcome) are in the cohort,
 * **no leakage**: only information known when the term is agreed is a feature; payment amount,
-  payment date, days overdue and status are out (see ``features.LEAKAGE_COLUMNS``),
+  payment date, days overdue and status are out (see ``features.LEAKAGE_COLUMNS``). The debt
+  balance is a feature too, so it must be the balance as of the agreement date; the data contract
+  says so and the pipeline cannot check it,
 * **no reverse causality**: follow-up counts are out too (``EXPLANATORY_ONLY_COLUMNS``),
 * **people are not independent**: cross-validation is grouped by person, never by row,
 * **time**: a temporal hold-out (train on early agreements, test on late ones) is the second check,
@@ -92,7 +94,11 @@ def _text(series: pd.Series) -> pd.Series:
 
 
 def design_matrix(df: pd.DataFrame) -> pd.DataFrame:
-    """The feature table. Every column is knowable when the term is agreed."""
+    """The feature table.
+
+    Every column is knowable when the term is agreed, provided the debt balance behind
+    ``original_debt`` was read as of the agreement date (see the data contract).
+    """
     debt = df["original_debt"]
     return pd.DataFrame(
         {
