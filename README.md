@@ -95,8 +95,9 @@ $env:DEA_CONFIG = "examples/settings.example.json"
 Reports are Markdown files under `reports/`; the dataset is `data/dataset.json`; both are
 gitignored. `delinquency-eda --help` lists the stages and `delinquency-eda <stage> --help` its
 options. Global options (`--dataset`, `--out-dir`, `--config`, `--backend`, `--source`,
-`--env-file`) may come before or after the stage name. The `model` stage is the slow one (tens of
-seconds on the demo data) because of the gradient-boosting model and permutation importance.
+`--env-file`) may come before or after the stage name. The `model` stage is the slow one because of
+the gradient-boosting model and permutation importance. On the demo data it takes under a minute on
+a CI runner and several minutes on a slow or busy machine.
 
 The demo plants situations the stages should find: a term effect on payment, slips still inside
 their grace window, a pseudo-agent that passes the default exclusion patterns and never collects,
@@ -253,7 +254,7 @@ examples/
   build_demo_db.py                  seeded generator of the demo databases
   settings.example.json             every setting with its invented default
 docs/
-  architecture.md  data-contract.md  stages.md  decisions.md  glossary.md
+  architecture.md  data-contract.md  data-sources.md  stages.md  decisions.md  glossary.md
 tests/                              pytest suite
 .github/workflows/ci.yml            install, lint, test, run the quick start
 ```
@@ -291,8 +292,9 @@ observational.
   alone.
 - The dataset holds the latest status of each agreement, so later breaks and re-writes cannot be
   rewound by the drift stage.
-- Feature construction joins people, contacts and breaks in Python loops. A local check built the
-  features for 20,000 slips and 80,000 contacts in about a second; the model stage costs far more,
+- Feature construction joins people, contacts and breaks in Python loops. A rough check on one
+  Windows machine built the features (`analysis_frame`) for 20,000 invented slips and 80,000
+  contacts in about four seconds; the time depends on the machine. The model stage costs far more,
   and nothing is tuned for millions of rows.
 - `data/dataset.json` holds the opaque keys and agent identifiers your database supplies. Keep it
   out of version control and treat it like the source data.

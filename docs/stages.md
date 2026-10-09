@@ -19,7 +19,8 @@ the dataset file `base` wrote, so it is repeatable and safe to run on a laptop w
 | 10 | `model` | dataset | `model.md` |
 
 Exit codes: `0` success, `1` a stage ran and reported a failed check (only `schema` does this),
-`2` usage or configuration problem. Errors print as one `error: ...` line, never a traceback.
+`2` usage or configuration problem. Errors print an `error: ...` line (a usage error prints the
+usage text before it), never a traceback.
 
 ## The outcome every stage shares
 
