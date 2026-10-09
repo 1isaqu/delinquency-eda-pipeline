@@ -253,7 +253,7 @@ src/delinquency_eda/
   stages/                           s00_period.py ... s10_term_model.py and the registry
 examples/
   build_demo_db.py                  seeded generator of the demo databases
-  settings.example.json             every setting with its invented default
+  settings.example.json             every setting: invented defaults, the demo's pseudo-agent
 docs/
   architecture.md  data-contract.md  data-sources.md  stages.md  decisions.md  glossary.md
 tests/                              pytest suite

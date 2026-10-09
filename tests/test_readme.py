@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import re
 import shlex
 from dataclasses import fields
@@ -106,6 +107,12 @@ def test_example_settings_file_is_valid_and_matches_the_defaults():
         assert getattr(loaded, field.name) == getattr(defaults, field.name), field.name
     assert loaded.model == defaults.model
     assert loaded.system_agents == ("batch_loader",)
+
+
+def test_example_settings_file_names_every_setting():
+    raw = json.loads((ROOT / "examples" / "settings.example.json").read_text(encoding="utf-8"))
+    assert set(raw) == {f.name for f in fields(Settings)}
+    assert set(raw["model"]) == {f.name for f in fields(ModelSettings)}
 
 
 def test_relative_links_point_at_files_that_exist():
