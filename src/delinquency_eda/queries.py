@@ -11,8 +11,8 @@ Rules every query follows (they are the pipeline's standard behavior, not option
   join to ``agents`` never drops a slip,
 * the portfolio label is resolved with a single top-one lookup per agreement, so joins never
   multiply rows,
-* dates are bound parameters, never ``GETDATE()``: the reference date is explicit, so a run can be
-  reproduced.
+* dates are bound parameters, never ``GETDATE()``: the reference date comes from the caller, so a
+  run can be reproduced.
 
 Parameter order in each builder is documented on the returned ``Query``.
 """

@@ -33,7 +33,7 @@ Terms and field names used in the code, reports and settings.
 | Still open | Overdue, unpaid, grace period not over (`days_overdue <= grace_days`). Right-censored. |
 | Definitive (lost) | Overdue, unpaid, grace period over. |
 | Mature | `days_overdue > grace_days`. The outcome is final. |
-| Reference date (`as_of`) | The date outcomes are derived against. Always explicit. |
+| Reference date (`as_of`) | The date outcomes are derived against, set with `--as-of`. `period`, `base` and `card` use today's local date when the flag is left out. |
 | Censoring | The outcome is not known yet because the observation window has not closed. |
 | Leakage | A feature measured after the outcome, or that encodes it. |
 

@@ -16,9 +16,10 @@ Most of the code is about counting the overdue-unpaid bucket correctly:
   the bucket is inflated for the most recent due dates, which is the window a daily dashboard
   shows. Stage 05 splits the bucket into still open and definitive. Every unpaid rate used to
   compare groups is computed on the mature cohort, selected by due date alone and never by outcome.
-- Outcomes are derived in Python against an explicit `--as-of` date, never the server clock. The
-  same command with the same date writes the same dataset, byte for byte, and stage 04 can replay
-  the past from the dataset alone.
+- Outcomes are derived in Python against the `--as-of` date, never the database server's clock.
+  Without the flag, `period`, `base` and `card` use today's local date, so pass it for a run you
+  want to repeat: the same command with the same date writes the same dataset, byte for byte.
+  Stage 04 can replay the past from the dataset alone.
 - Stage 00 finds the window that reproduces a card you were shown. Stage 04 finds which slips moved
   since, and which value measure (first installment, whole agreement, original debt) a headline
   figure actually sums.
@@ -262,8 +263,8 @@ tests/                              pytest suite
 ## Key design decisions
 
 The reasoning is in [docs/decisions.md](docs/decisions.md). In brief: treat the unpaid bucket as
-censored and cut by maturity; make maturity depend on the due date only; derive outcomes from an
-explicit date; run business filters before the latest-row-wins ranking; resolve statuses by label
+censored and cut by maturity; make maturity depend on the due date only; derive outcomes from a
+date the caller sets; run business filters before the latest-row-wins ranking; resolve statuses by label
 and keys by composite; take one portfolio label per agreement with a top-one lookup; keep a zero
 balance and a missing debt apart; only add in cleaning; separate concentration from discrimination;
 keep follow-up out of the model; read the debt balance as of the agreement; group by person and

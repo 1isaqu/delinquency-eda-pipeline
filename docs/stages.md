@@ -38,8 +38,9 @@ on its outcome cannot change. Maturity depends on the due date alone, never on t
 selecting "paid, or unpaid and old" would pick slips by what happened to them and bias every rate
 computed on them.
 
-The reference date is an explicit parameter, never the server clock, so the same command with the
-same date builds the same dataset byte for byte.
+The reference date comes from `--as-of`, never from the database server's clock. `period`, `base`
+and `card` use today's local date when the flag is left out, so pass it when a run must be
+repeatable: the same command with the same date builds the same dataset byte for byte.
 
 ## 00 `period`: which window reproduces the funnel?
 

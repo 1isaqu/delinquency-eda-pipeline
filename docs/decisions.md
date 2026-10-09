@@ -22,10 +22,11 @@ indicator that compares today with an outcome that has a grace period.
 **Why.** Selecting "paid, or unpaid and old" picks rows by what happened to them. Any rate on that
 set is biased upward for payers.
 
-## 3. Derive outcomes in Python from an explicit reference date
+## 3. Derive outcomes in Python from a reference date the caller sets
 
 **Decision.** The database returns raw facts. Buckets, days overdue and maturity are computed in
-`derive.py` against `--as-of`, never with the server clock.
+`derive.py` against `--as-of`, never with the database server's clock. `period`, `base` and `card`
+take the flag and use today's local date without it.
 
 **Why.** Reproducibility (same date, same file, byte for byte), replay (the drift stage re-derives
 the past), and one unit-tested place for the rule. With the server clock, each re-run uses a
