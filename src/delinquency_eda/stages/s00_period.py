@@ -82,7 +82,7 @@ def parse_reference(specs: Sequence[str]) -> dict[str, int]:
 
 
 def default_windows(as_of: date) -> list[Window]:
-    """The windows a summary card usually means, relative to the reference date.
+    """The windows a summary card might cover, relative to the reference date.
 
     Candidates that would be empty (month to yesterday on the first of the month) or that repeat
     another candidate's span are left out.

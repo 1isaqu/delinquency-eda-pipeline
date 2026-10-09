@@ -149,7 +149,7 @@ def render(result: CensoringResult, total_slips: int) -> Doc:
                 fmt_pct(result.value_definitive, total_value),
             ],
             [
-                "**bucket as usually reported**",
+                "**bucket as the card counts it**",
                 f"**{fmt_int(result.unpaid)}**",
                 "**100.0%**",
                 f"**{fmt_money(total_value)}**",
