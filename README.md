@@ -13,15 +13,16 @@ code.
 Most of the code is about counting the overdue-unpaid bucket correctly:
 
 - "Overdue and not paid on time" counts slips that can still be paid on time (right-censoring), so
-  the bucket is inflated for the most recent due dates, which is the window a daily dashboard
-  shows. Stage 05 splits the bucket into still open and definitive. Every unpaid rate used to
-  compare groups is computed on the mature cohort, selected by due date alone and never by outcome.
-- Outcomes are derived in Python against an explicit `--as-of` date, never the server clock. The
-  same command with the same date writes the same dataset, byte for byte, and stage 04 can replay
-  the past from the dataset alone.
+  the bucket is inflated for the most recent due dates, the ones a month-to-date view holds. Stage
+  05 splits the bucket into still open and definitive. Every unpaid rate used to compare groups is
+  computed on the mature cohort, selected by due date alone and never by outcome.
+- Outcomes are derived in Python against the `--as-of` date, never the database server's clock.
+  Without the flag, `period`, `base` and `card` use today's local date, so pass it for a run you
+  want to repeat: the same command with the same date writes the same dataset, byte for byte.
+  Stage 04 can replay the past from the dataset alone.
 - Stage 00 finds the window that reproduces a card you were shown. Stage 04 finds which slips moved
   since, and which value measure (first installment, whole agreement, original debt) a headline
-  figure actually sums.
+  figure sums.
 - Columns measured after the outcome are listed and excluded from the model (leakage). Follow-up
   counts are descriptive only: if outreach goes to people who are already slipping, follow-up and
   non-payment are entangled (reverse causality).
@@ -140,6 +141,20 @@ tiers of data (synthetic demo, public datasets, your own data).
    export DEA_DB_SCHEMA=reporting
    ```
 
+   The same in PowerShell:
+
+   ```powershell
+   python -m pip install -e ".[sqlserver]"
+   $env:DEA_BACKEND = "sqlserver"
+   $env:DEA_SOURCES = "auto=your_database_one,consumer=your_database_two"
+   $env:DEA_DB_HOST = "db.example.invalid"
+   $env:DEA_DB_USER = "report_reader"
+   $env:DEA_DB_PASSWORD = "change-me"
+   $env:DEA_DB_SCHEMA = "reporting"
+   ```
+
+   On any shell you can instead fill in a copy of `.env.example` and pass `--env-file .env`.
+
    Use a login that only has read permission. The pipeline also refuses any statement that is not a
    single `SELECT` or `WITH ... SELECT`. That guard catches mistakes in the pipeline's own SQL;
    access control still has to come from a read-only login.
@@ -173,8 +188,7 @@ Connection settings come from environment variables only (a `.env`-style file ca
 | `DEA_DB_QUERY_TIMEOUT` | `120` | seconds |
 
 Rules and thresholds live in the JSON settings file. Every default below is invented so the demo
-and the tests run. None is a recommendation; calibrate each on your own data. Unknown keys are an
-error, not silently ignored.
+and the tests run; calibrate each on your own data. Unknown keys are an error.
 
 | Setting | Default | Meaning |
 |---|---|---|
@@ -199,7 +213,7 @@ error, not silently ignored.
 | `portfolio_group_pattern` | `[\s-]+\d+$` | trailing sequence token removed to get the portfolio group |
 | `suspect_agent_pattern` | `system\|robot\|bot\|batch\|auto\|test\|import` | agents flagged by the diagnostics as possible system accounts |
 | `model.folds` | `5` | grouped cross-validation folds |
-| `model.random_state` | `42` | seed for folds, boosting and permutation importance |
+| `model.random_state` | `42` | seed for boosting and permutation importance (the grouped folds need none) |
 | `model.logistic_c` | `1.0` | inverse regularization of the logistic model |
 | `model.logistic_max_iter` | `2000` | optimizer iterations |
 | `model.boosting_max_iter` | `300` | boosting rounds |
@@ -214,7 +228,7 @@ error, not silently ignored.
 |--:|---|---|
 | 00 | `period` | The funnel (generated, paid on time, overdue unpaid, to mature) over candidate date windows from one fetch, ranked by closeness to counts you already have. Use it when a card does not say which window it covers. |
 | 01 | `schema` | Which contract tables and columns exist, their types, and whether configured status labels are in the catalog. Run first against a new database. |
-| 02 | `base` | The dataset bundle: first-installment slips with derived outcomes, the debtor rows of the same people, outreach events, and earlier broken agreements. Everything after it is offline. |
+| 02 | `base` | The dataset bundle: first-installment slips with derived outcomes, the debtor rows of the same people, outreach events, and earlier broken agreements. Stages 03 to 08 and 10 read only this file. |
 | 03 | `analysis` | Per factor, concentration of the unpaid value and discrimination of the unpaid rate on the mature cohort, with lift and sample-size flags. |
 | 04 | `drift` | The same slips re-derived at an earlier date: buckets, transitions, the slips that moved, and which value measure a headline figure sums. |
 | 05 | `censoring` | The unpaid bucket split into still open and definitive, the inflation of the naive count, and the on-time rate with and without the maturity cut. |
@@ -252,7 +266,7 @@ src/delinquency_eda/
   stages/                           s00_period.py ... s10_term_model.py and the registry
 examples/
   build_demo_db.py                  seeded generator of the demo databases
-  settings.example.json             every setting with its invented default
+  settings.example.json             every setting: invented defaults, the demo's pseudo-agent
 docs/
   architecture.md  data-contract.md  data-sources.md  stages.md  decisions.md  glossary.md
 tests/                              pytest suite
@@ -261,35 +275,40 @@ tests/                              pytest suite
 
 ## Key design decisions
 
-The reasoning is in [docs/decisions.md](docs/decisions.md). In brief: treat the unpaid bucket as
-censored and cut by maturity; make maturity depend on the due date only; derive outcomes from an
-explicit date; run business filters before the latest-row-wins ranking; resolve statuses by label
-and keys by composite; take one portfolio label per agreement with a top-one lookup; keep a zero
-balance and a missing debt apart; only add in cleaning; separate concentration from discrimination;
-keep follow-up out of the model; read the debt balance as of the agreement; group by person and
-validate by time; compare term bands against a stated reference; and say that all of it is
-observational.
+The reasoning for each is in [docs/decisions.md](docs/decisions.md).
+
+- The unpaid bucket is censored, so rates use the mature cohort, and maturity depends on the due
+  date only.
+- Outcomes are derived in Python against a date the caller sets.
+- The extraction runs business filters before the latest-row-wins ranking, resolves statuses by
+  label, keys agreements by a composite, and takes one portfolio label per agreement with a top-one
+  lookup.
+- A zero balance and a missing debt stay apart, and cleaning only adds.
+- Concentration and discrimination are separate tables.
+- Follow-up stays out of the model, and the debt balance is read as of the agreement.
+- Validation groups by person and holds out by time. Term bands are compared against a stated
+  reference band.
+- The analysis and model reports call their results associations.
 
 ## Limitations
 
 - SQL Server is not exercised against a live server. The SQL Server adapter and dialect are tested
   through a fake DB-API connection and by inspecting the generated T-SQL (hints, top-one lookup,
   bound dates, parameter order). The extraction SQL runs end to end only on SQLite.
-- The suite was run locally on Python 3.14, and CI runs and passes on 3.10, 3.12 and 3.14.
-  `requires-python` says 3.10.
-- Every default setting is invented. Grace period, bands, status labels, exclusion patterns and the
-  reliability floors are placeholders so the demo runs. They are not benchmarks.
-- The demo generator is arbitrary too. Every constant in it (line sizes, ticket scales, zero-balance
-  shares, payment-model coefficients) is a hand-picked value, not fitted to or derived from any
-  dataset. It plants effects so each stage has something to find, and their sizes are not a finding
-  about any real operation.
+- CI runs the suite on Python 3.10, 3.12 and 3.14. `requires-python` is `>=3.10`, so 3.11 and 3.13
+  install but are not in the CI matrix.
+- The default settings (grace period, bands, status labels, exclusion patterns, reliability floors)
+  are placeholders so the demo runs. The demo generator is arbitrary too: every constant in it (line
+  sizes, ticket scales, zero-balance shares, payment-model coefficients) is a hand-picked value, not
+  fitted to or derived from any dataset. It plants effects so each stage has something to find, and
+  their sizes are not a finding about any real operation.
 - The pipeline cannot tell when a debt balance was read. The contract asks for the balance as of the
   agreement date; with a later balance, the original-debt and zero-balance controls of the model
   can leak the outcome.
 - The model measures an association under control. Nothing here shows that changing a term changes
   behavior, and the data has no field for why a slip was not paid.
-- The model is not a scoring tool. Read its odds ratios and the counterfactual rather than the AUC
-  alone.
+- The model is not a scoring tool. Its odds ratios and counterfactual answer the term question; the
+  AUC only shows how well the features separate payers from non-payers.
 - The dataset holds the latest status of each agreement, so later breaks and re-writes cannot be
   rewound by the drift stage.
 - Feature construction joins people, contacts and breaks in Python loops. A rough check on one

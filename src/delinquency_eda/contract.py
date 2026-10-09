@@ -1,8 +1,8 @@
 """The data contract: tables and columns the extraction expects. See docs/data-contract.md.
 
 Names are generic. A real database is mapped onto them with views (the documented route) or by
-renaming. ``required`` columns are read by this pipeline; ``optional`` columns belong to the shared
-collections contract but are not read here, so a missing one is only informational.
+renaming. ``required`` columns are read by this pipeline; ``optional`` columns are checked by the
+schema stage but not read, so a missing one is only informational.
 """
 
 from __future__ import annotations

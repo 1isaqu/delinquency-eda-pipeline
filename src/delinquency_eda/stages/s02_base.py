@@ -1,16 +1,16 @@
 """Stage 02 - base build: extract the dataset every offline stage reads.
 
-This is the only stage (with period, schema and card) that touches a database. It writes one JSON
-bundle so everything after it is offline and repeatable:
+Four stages read a database (period, schema, base and card). This one writes the JSON bundle that
+stages 03 to 08 and 10 read, so those run offline and repeatably. The bundle has four tables:
 
 * ``base``     first-installment slips due in the period, each with its derived outcome,
 * ``debtors``  every debtor row that shares an opaque person key with a base row,
 * ``contacts`` outreach attempts for those debtors between the earliest agreement and last due date,
 * ``breaks``   earlier first-installment agreements of those debtors that ended broken.
 
-The outcome is derived in Python against an explicit ``--as-of`` date rather than from the
-server clock, so the same command with the same date always gives the same dataset, and a later
-stage can replay the past by re-deriving at an earlier date.
+The outcome is derived in Python against the ``--as-of`` date (today's local date when the flag
+is left out), never the database server's clock, so the same command with the same date always
+gives the same dataset, and a later stage can replay the past by re-deriving at an earlier date.
 """
 
 from __future__ import annotations

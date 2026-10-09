@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import re
 import shlex
 from dataclasses import fields
@@ -108,6 +109,12 @@ def test_example_settings_file_is_valid_and_matches_the_defaults():
     assert loaded.system_agents == ("batch_loader",)
 
 
+def test_example_settings_file_names_every_setting():
+    raw = json.loads((ROOT / "examples" / "settings.example.json").read_text(encoding="utf-8"))
+    assert set(raw) == {f.name for f in fields(Settings)}
+    assert set(raw["model"]) == {f.name for f in fields(ModelSettings)}
+
+
 def test_relative_links_point_at_files_that_exist():
     links = re.findall(r"\]\(([^)#]+?)\)", README)
     local = [target for target in links if not target.startswith(("http://", "https://"))]
@@ -139,6 +146,24 @@ def test_the_layout_block_only_names_files_and_folders_that_exist():
     existing = {p.name for p in ROOT.rglob("*") if ".git" not in p.parts and ".venv" not in p.parts}
     for name in names:
         assert name.rstrip("/") in existing, name
+
+
+MARKDOWN_PAGES = ["README.md", *sorted(f"docs/{p.name}" for p in (ROOT / "docs").glob("*.md"))]
+
+
+@pytest.mark.parametrize("page", MARKDOWN_PAGES)
+def test_every_table_row_has_as_many_cells_as_its_header(page):
+    """GitHub splits a cell at every unescaped pipe, inside backticks too."""
+    header, fenced = None, False
+    for number, line in enumerate((ROOT / page).read_text(encoding="utf-8").splitlines(), 1):
+        text = line.strip()
+        fenced ^= text.startswith("```")
+        if fenced or not text.startswith("|"):
+            header = None
+            continue
+        cells = len(re.split(r"(?<!\\)\|", text.strip("|")))
+        header = header or cells
+        assert cells == header, f"{page}:{number} has {cells} cells, its header {header}"
 
 
 @pytest.mark.parametrize(

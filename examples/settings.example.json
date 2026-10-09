@@ -5,6 +5,7 @@
   "manual_break_label": "BROKEN",
   "excluded_agent_patterns": ["system%", "test%"],
   "system_agents": ["batch_loader"],
+  "id_chunk_size": 500,
   "term_band_edges": [0, 2, 5, 10, 20],
   "value_band_edges": [100, 500, 2000, 10000],
   "ratio_band_edges": [0.05, 0.2, 0.5],

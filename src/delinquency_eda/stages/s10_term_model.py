@@ -25,8 +25,9 @@ hold-out; and a counterfactual that rewrites only the term and keeps everything 
 
 Read the result as an association measured under control, not as proof that changing the term
 changes behavior: people who ask for a long term may already be the people who cannot pay. Only a
-randomized term would settle that. The model measures an effect under control and is not a
-scoring tool, so read the odds ratios and the counterfactual rather than the AUC alone.
+randomized term would settle that. The model is not a scoring tool either: the odds ratios and the
+counterfactual answer the question, and the AUC only shows how well the features separate payers
+from non-payers.
 """
 
 from __future__ import annotations
@@ -486,8 +487,9 @@ def render(result: ModelResult, settings: Settings) -> Doc:
             "Odds ratios above 1 mean more non-payment than the reference band, with the other "
             "features held fixed. They are associations: people who ask for a long term may "
             "already be the people who cannot pay.",
-            "The model measures an effect under control and is not a scoring tool, so read the "
-            "odds ratios and the counterfactual rather than the AUC alone.",
+            "The model is not a scoring tool: the odds ratios and the counterfactual answer the "
+            "question, and the AUC only shows how well the features separate payers from "
+            "non-payers.",
             "A randomized term (draw the term offered among eligible agreements, compare payment "
             "at the end of the grace period) is the only design that would show cause.",
         ]

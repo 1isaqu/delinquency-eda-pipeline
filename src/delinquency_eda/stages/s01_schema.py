@@ -92,8 +92,7 @@ def render(lines: Sequence[LineSchema]) -> Doc:
     doc = Doc().h1("Schema check")
     doc.p(
         "Compared with the contract in docs/data-contract.md. Names match case-insensitively. "
-        "Required columns are read by the pipeline; optional ones belong to the shared contract "
-        "but are not read here."
+        "Required columns are read by the pipeline; optional ones are checked but not read."
     )
     summary = [
         [s.product_line, "yes" if s.ready("slips") else "no", "yes" if s.ready("base") else "no"]

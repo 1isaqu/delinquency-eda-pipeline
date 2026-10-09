@@ -1,8 +1,8 @@
 # Stage reference
 
 Eleven stages, numbered in the order you normally run them. Four read the database (`period`,
-`schema`, `base` and, unless told otherwise, `card`). Everything after `base` is offline and reads
-the dataset file `base` wrote, so it is repeatable and safe to run on a laptop with no connection.
+`schema`, `base` and, without `--from-dataset`, `card`). Stages 03 to 08 and 10 are offline: they
+read the dataset file `base` wrote, so they are repeatable and run on a laptop with no connection.
 
 | # | Command | Reads | Writes (under `--out-dir`) |
 |--:|---|---|---|
@@ -38,8 +38,9 @@ on its outcome cannot change. Maturity depends on the due date alone, never on t
 selecting "paid, or unpaid and old" would pick slips by what happened to them and bias every rate
 computed on them.
 
-The reference date is an explicit parameter, never the server clock, so the same command with the
-same date builds the same dataset byte for byte.
+The reference date comes from `--as-of`, never from the database server's clock. `period`, `base`
+and `card` use today's local date when the flag is left out, so pass it when a run must be
+repeatable: the same command with the same date builds the same dataset byte for byte.
 
 ## 00 `period`: which window reproduces the funnel?
 
@@ -128,7 +129,7 @@ yesterday is in the overdue-unpaid bucket today while still able to be paid on t
 splits the bucket into *still open* and *definitive*, reports the inflation of the naive count over
 the definitive one, and contrasts the on-time rate over all slips with the rate over mature slips,
 whose denominator cannot move. Recent due dates are listed one by one; older ones, all definitive,
-are summarized. The distortion lives in the open period, which is the view people check daily.
+are summarized. Only a period that still holds recent due dates is affected.
 
 ## 06 `eda`: exploratory report
 
@@ -139,8 +140,9 @@ with a stability verdict, Spearman correlation with non-payment (leaking columns
 outliers, findings, recommendations and limits. Every finding is a sentence built from numbers
 computed on the dataset at hand. Each row of the recommendation table appears only when a check on
 that dataset fired (for example, the term row needs a long right tail in days to the first due
-date). One line of fixed advice sits below the table: keep columns measured after the outcome out of
-a model.
+date). Two fixed paragraphs sit below the table: keep columns measured after the outcome out of a
+model, and the follow-up analyses worth running (the stage 10 model, a time-to-payment curve after
+the due date, a month-by-month stability check).
 
 ## 07 `diagnose`: cleaning diagnostics (report only)
 
@@ -161,7 +163,7 @@ nothing but the report. It does not validate identifier formats.
 | R2 `zero_balance` | flags a zero original debt; the installment ratio stays `NaN`; nothing is imputed |
 | R3 leakage | lists columns measured after the outcome (`paid_amount`, `paid_date`, `days_overdue`, `status_id`, `status_label`) and the explanatory-only follow-up columns in `clean_meta.json`; keeps them for audit |
 | R4 `portfolio_group` | the label without its trailing sequence token (`portfolio_group_pattern`); the original stays |
-| R5 `agreement_key` | `product_line|agreement_id|portfolio_id`, asserted unique; a row id alone collides across product lines |
+| R5 `agreement_key` | `product_line\|agreement_id\|portfolio_id`, asserted unique; a row id alone collides across product lines |
 | R6 `group_key` | the person key, or the debtor row when a slip has none, the unit to split on; keyless slips never pool |
 | R7 `is_mature` | the outcome is final; models train on mature rows only |
 
@@ -203,11 +205,11 @@ Outputs: grouped cross-validated AUC for both models against a term-only baselin
 the signal above chance the term alone captures); odds ratios of each term band against the
 shortest observed band, computed as differences of coefficients so every band is compared with
 the same reference; odds ratios for the other controls; permutation importance on the hold-out; and
-a counterfactual that rewrites only the term of every agreement and keeps the rest, which is the
-term's effect isolated from the mix.
+a counterfactual that rewrites only the term of every agreement and keeps the rest, which
+separates the term from the mix.
 
 Read it as an association measured under control, not as proof that changing the term changes
 behavior: people who ask for a long term may already be the people who cannot pay. A randomized
-term is the only design that would settle that. The model measures an effect under control and is
-not a scoring tool, so read the odds ratios and the counterfactual rather than the AUC alone. Models
-are fitted in memory and never saved.
+term is the only design that would settle that. The model is not a scoring tool either: the odds
+ratios and the counterfactual answer the question, and the AUC only shows how well the features
+separate payers from non-payers. Models are fitted in memory and never saved.
