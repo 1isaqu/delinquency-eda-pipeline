@@ -199,7 +199,7 @@ error, not silently ignored.
 | `portfolio_group_pattern` | `[\s-]+\d+$` | trailing sequence token removed to get the portfolio group |
 | `suspect_agent_pattern` | `system\|robot\|bot\|batch\|auto\|test\|import` | agents flagged by the diagnostics as possible system accounts |
 | `model.folds` | `5` | grouped cross-validation folds |
-| `model.random_state` | `42` | seed for folds, boosting and permutation importance |
+| `model.random_state` | `42` | seed for boosting and permutation importance (the grouped folds need none) |
 | `model.logistic_c` | `1.0` | inverse regularization of the logistic model |
 | `model.logistic_max_iter` | `2000` | optimizer iterations |
 | `model.boosting_max_iter` | `300` | boosting rounds |

@@ -91,7 +91,8 @@ period the dataset was built with (the one that produced its `bucket` column).
   file does not depend on the order the database returns rows in, and the JSON is written with a
   fixed layout. The same command on the same data gives the same bytes; tests check both the
   repeat run and a database that returns every result set reversed.
-- Randomness (model folds, boosting, permutation importance) is seeded from `model.random_state`.
+- Boosting and permutation importance are seeded from `model.random_state`. The grouped folds
+  need no seed: `GroupKFold` does not shuffle, so it splits the same way on every run.
 - Reports are generated, not edited: re-running a stage overwrites its report.
 
 ## Testing strategy
