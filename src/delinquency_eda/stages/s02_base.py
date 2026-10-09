@@ -1,7 +1,7 @@
 """Stage 02 - base build: extract the dataset every offline stage reads.
 
-This is the only stage (with period, schema and card) that touches a database. It writes one JSON
-bundle so everything after it is offline and repeatable:
+Four stages read a database (period, schema, base and card). This one writes the JSON bundle that
+stages 03 to 08 and 10 read, so those run offline and repeatably. The bundle has four tables:
 
 * ``base``     first-installment slips due in the period, each with its derived outcome,
 * ``debtors``  every debtor row that shares an opaque person key with a base row,

@@ -1,8 +1,8 @@
 # Stage reference
 
 Eleven stages, numbered in the order you normally run them. Four read the database (`period`,
-`schema`, `base` and, unless told otherwise, `card`). Everything after `base` is offline and reads
-the dataset file `base` wrote, so it is repeatable and safe to run on a laptop with no connection.
+`schema`, `base` and, without `--from-dataset`, `card`). Stages 03 to 08 and 10 are offline: they
+read the dataset file `base` wrote, so they are repeatable and run on a laptop with no connection.
 
 | # | Command | Reads | Writes (under `--out-dir`) |
 |--:|---|---|---|

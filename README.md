@@ -215,7 +215,7 @@ error, not silently ignored.
 |--:|---|---|
 | 00 | `period` | The funnel (generated, paid on time, overdue unpaid, to mature) over candidate date windows from one fetch, ranked by closeness to counts you already have. Use it when a card does not say which window it covers. |
 | 01 | `schema` | Which contract tables and columns exist, their types, and whether configured status labels are in the catalog. Run first against a new database. |
-| 02 | `base` | The dataset bundle: first-installment slips with derived outcomes, the debtor rows of the same people, outreach events, and earlier broken agreements. Everything after it is offline. |
+| 02 | `base` | The dataset bundle: first-installment slips with derived outcomes, the debtor rows of the same people, outreach events, and earlier broken agreements. Stages 03 to 08 and 10 read only this file. |
 | 03 | `analysis` | Per factor, concentration of the unpaid value and discrimination of the unpaid rate on the mature cohort, with lift and sample-size flags. |
 | 04 | `drift` | The same slips re-derived at an earlier date: buckets, transitions, the slips that moved, and which value measure a headline figure sums. |
 | 05 | `censoring` | The unpaid bucket split into still open and definitive, the inflation of the naive count, and the on-time rate with and without the maturity cut. |
