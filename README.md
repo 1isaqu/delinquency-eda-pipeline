@@ -13,9 +13,10 @@ code.
 Most of the code is about counting the overdue-unpaid bucket correctly:
 
 - "Overdue and not paid on time" counts slips that can still be paid on time (right-censoring), so
-  the bucket is inflated for the most recent due dates, the ones a month-to-date view holds. Stage
-  05 splits the bucket into still open and definitive. Every unpaid rate used to compare groups is
-  computed on the mature cohort, selected by due date alone and never by outcome.
+  the bucket is inflated for due dates in the last `grace_days` days: month to date, plus the
+  previous month during the first `grace_days` days of a month. Stage 05 splits the bucket into
+  still open and definitive. Every unpaid rate used to compare groups is computed on the mature
+  cohort, selected by due date alone and never by outcome.
 - Outcomes are derived in Python against the `--as-of` date, never the database server's clock.
   Without the flag, `period`, `base` and `card` use today's local date, so pass it for a run you
   want to repeat: the same command with the same date writes the same dataset, byte for byte.

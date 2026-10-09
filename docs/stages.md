@@ -178,9 +178,9 @@ Recomputes the indicator for any number of periods side by side (`--period NAME=
 the open month and the two before). For each period: generated, paid on time, to mature, overdue
 unpaid *as the card counts it*, of which still in grace and of which lost; first-installment and
 whole-agreement value of each; the inflation of the card count; and the on-time rate as the card
-computes it against the rate over mature slips. In a closed period everything has matured and the
-two agree. All periods come from one fetch (`--as-of` sets the date) or from the dataset
-(`--from-dataset`; the dataset fixes the date).
+computes it against the rate over mature slips. Once every due date in a period is more than
+`grace_days` days old, everything has matured and the two agree. All periods come from one fetch
+(`--as-of` sets the date) or from the dataset (`--from-dataset`; the dataset fixes the date).
 
 ## 10 `model`: the effect of the term with the mix controlled
 
