@@ -68,6 +68,10 @@ The default labels are `ACTIVE`, `BROKEN`, `PAID`, `PENDING_EXCEPTION`, `REJECTE
 
 Use invented or internal ids. Real names are not needed anywhere.
 
+An agreement whose `agent_id` has no row in `agents` is still extracted, with an empty name and
+login. The exclusion patterns match on name and login, so they cannot exclude such an agreement;
+list every agent, including system accounts, if you rely on them.
+
 ### `agreement_debts`: links agreements to debts
 
 | Column | Type | Meaning |

@@ -216,6 +216,13 @@ def test_agent_fields_and_person_key_are_carried(world):
     )
 
 
+def test_an_agreement_whose_agent_is_missing_from_agents_is_kept(tmp_path):
+    orphan = (1, 5, 1, 1, 0, 100.0, 1, None, "2026-03-01", "2026-03-10", None, "ACTIVE", "ghost")
+    row = slips(make_world(tmp_path / "ghost.db", rows=[orphan]))[5]
+    assert row["agent_id"] == "ghost"
+    assert row["agent_name"] is None and row["agent_login"] is None
+
+
 def test_lean_rows_have_no_detail_columns(world):
     with SQLiteDatabase.open(world) as db:
         rows = fetch_slips(db, "auto", SETTINGS, START, END, as_of=AS_OF, detail=False)
