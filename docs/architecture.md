@@ -42,7 +42,7 @@ analysis on a machine that cannot reach the database.
 
 `db.base.Database` has three methods: `query(sql, params)`, `table_columns(table)` and `close()`.
 `DBAPIDatabase` implements them over any PEP 249 connection with an `INFORMATION_SCHEMA`
-catalogue, and checks every statement with `ensure_read_only` first. A subclass only chooses the
+catalog, and checks every statement with `ensure_read_only` first. A subclass only chooses the
 dialect and how the connection is opened:
 
 | Adapter | Used for | Connection |

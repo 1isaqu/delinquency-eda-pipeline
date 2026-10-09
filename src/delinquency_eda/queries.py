@@ -239,7 +239,7 @@ WHERE b.rn = 1"""
 
 
 def build_status_query(dialect: Dialect, schema: str | None = None) -> Query:
-    """The status catalogue, used by the schema check to confirm configured labels exist."""
+    """The status catalog, used by the schema check to confirm configured labels exist."""
     sql = (
         "SELECT s.status_id, s.label\n"
         f"FROM {dialect.table('agreement_statuses', 's', schema)}\n"

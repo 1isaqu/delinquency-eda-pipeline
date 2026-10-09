@@ -31,7 +31,7 @@ columns per table; those are marked *optional* and are checked by the `schema` s
 | `agreement_id` | integer | no | Agreement number. Not unique on its own: pair it with `portfolio_id`. |
 | `portfolio_id` | integer | no | Portfolio the agreement belongs to. |
 | `debtor_id` | integer | no | The debtor row that signed. Links to `debtors`. |
-| `installment_no` | integer | no | `0` is the first installment (the down payment). The pipeline analyses first installments. |
+| `installment_no` | integer | no | `0` is the first installment (the down payment). The pipeline analyzes first installments. |
 | `amount` | numeric | no | Amount due for this installment. |
 | `plan_installments` | integer | yes | Installments the plan declared. |
 | `paid_amount` | numeric | yes | Money received. `NULL` when nothing was paid. |
@@ -46,7 +46,7 @@ An installment can be written twice by mistake. The latest row wins: for each
 `issued_at`, then the greatest `row_id`. Business filters (due-date window, status, excluded agents)
 run *before* that ranking, so a re-write that falls outside a filter cannot hide the valid row.
 
-### `agreement_statuses`: status catalogue
+### `agreement_statuses`: status catalog
 
 | Column | Type | Meaning |
 |---|---|---|
@@ -123,7 +123,7 @@ with a `NULL` key are never pooled together.
 | `occurred_at` | datetime | no | When it happened. |
 | `agent_id` | text or integer | yes | Optional, not read. |
 
-### `contact_results`: result catalogue
+### `contact_results`: result catalog
 
 | Column | Type | Meaning |
 |---|---|---|

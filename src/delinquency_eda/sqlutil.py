@@ -34,7 +34,7 @@ ALLOWED_STARTS = ("SELECT", "WITH")
 
 
 def strip_noise(sql: str) -> str:
-    """Remove comments, blank out string literals and neutralise quoted identifiers."""
+    """Remove comments, blank out string literals and neutralize quoted identifiers."""
 
     def repl(match: re.Match[str]) -> str:
         kind = match.lastgroup

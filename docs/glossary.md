@@ -9,7 +9,7 @@ Terms and field names used in the code, reports and settings.
 | Product line | One database with the contract schema (for example `auto`, `consumer`). Ids repeat across lines, so keys carry the line. |
 | Agreement | A payment plan a debtor agreed to. One row per installment in `agreements`. |
 | Installment | One payment of an agreement. `installment_no = 0` is the first installment (the down payment). |
-| First-installment slip (slip) | The payment slip of installment 0. The unit the pipeline analyses. |
+| First-installment slip (slip) | The payment slip of installment 0. The unit the pipeline analyzes. |
 | Generated agreement | An agreement whose status is in `generated_status_labels`: the population in scope. |
 | Broken / auto-broken agreement | An agreement that ended broken (by hand or by the system after a grace overflow). Earlier ones count as a person's break history. |
 | Exception (pending approval) | A status awaiting approval. Not in the generated set by default, so it is not extracted. |

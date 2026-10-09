@@ -42,10 +42,10 @@ agreement. A test pins this with a row built to fail if the order is swapped.
 
 ## 5. Statuses by label, keys by composite
 
-**Decision.** Status sets are configured as labels and resolved through the catalogue. Agreement
+**Decision.** Status sets are configured as labels and resolved through the catalog. Agreement
 keys are `product_line|agreement_id|portfolio_id`.
 
-**Why.** Status numbers differ between databases and across catalogue reloads; a test shifts every
+**Why.** Status numbers differ between databases and across catalog reloads; a test shifts every
 id to prove nothing depends on them. A row id repeats across product lines (each database has its
 own sequence), so on its own it is not a key.
 
@@ -73,7 +73,7 @@ and the stage reports exactly that: zero rows removed, zero cells imputed, zero 
 
 **Why.** Deleting or imputing rows throws away information that a flag keeps, and a flag can be
 undone. Everything additive is reversible, and the information-loss summary makes it checkable.
-Outliers are kept: winsorising would erase the large slips, which weigh the most in any value
+Outliers are kept: winsorizing would erase the large slips, which weigh the most in any value
 total.
 
 ## 9. Separate concentration from discrimination

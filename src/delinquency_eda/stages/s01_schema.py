@@ -1,9 +1,9 @@
 """Stage 01 - schema discovery: does the database look like the data contract?
 
 Run this first against a new database. It never reads data rows except the small status
-catalogue. For every contract table it reports whether the table exists, which required columns
+catalog. For every contract table it reports whether the table exists, which required columns
 are missing, which optional ones are, and which extra columns the table carries. It also checks
-that every status label named in the settings exists in the catalogue, because the extraction
+that every status label named in the settings exists in the catalog, because the extraction
 resolves statuses by label, never by number.
 
 Two readiness levels, because the stages need different tables:
@@ -79,8 +79,8 @@ def configured_labels(settings: Settings) -> list[str]:
 def check_database(db: Database, product_line: str, settings: Settings) -> LineSchema:
     tables = [check_table(spec, db.table_columns(spec.name)) for spec in TABLES]
     result = LineSchema(product_line, tables)
-    catalogue = next((t for t in tables if t.spec.name == "agreement_statuses"), None)
-    if catalogue is not None and catalogue.ok:
+    catalog = next((t for t in tables if t.spec.name == "agreement_statuses"), None)
+    if catalog is not None and catalog.ok:
         query = build_status_query(db.dialect, db.schema)
         found = {str(r["label"]).strip() for r in db.query(query.sql, query.params)}
         result.labels_checked = True
@@ -123,15 +123,15 @@ def render(lines: Sequence[LineSchema]) -> Doc:
 
 def _status_block(doc: Doc, line: LineSchema) -> None:
     if not line.labels_checked:
-        doc.p("Status labels were not checked: the status catalogue is missing or incomplete.")
+        doc.p("Status labels were not checked: the status catalog is missing or incomplete.")
     elif line.missing_labels:
         doc.p(
-            "Status labels named in the settings but absent from the catalogue: "
+            "Status labels named in the settings but absent from the catalog: "
             + ", ".join(f"`{x}`" for x in line.missing_labels)
             + "."
         )
     else:
-        doc.p("Every configured status label exists in the catalogue.")
+        doc.p("Every configured status label exists in the catalog.")
 
 
 def _types_block(doc: Doc, line: LineSchema) -> None:
@@ -168,6 +168,6 @@ def run(ctx: Context, args: argparse.Namespace) -> int:
                 )
                 ctx.say(f"  {table.spec.name}: {what}")
         if line.missing_labels:
-            ctx.say(f"  status labels not in the catalogue: {line.missing_labels}")
+            ctx.say(f"  status labels not in the catalog: {line.missing_labels}")
     ctx.write_report("schema.md", render(lines))
     return 0 if all(line.ready("base") for line in lines) else 1

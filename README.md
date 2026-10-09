@@ -122,7 +122,7 @@ outside the demo.
    | `contact_events` | outreach attempt | `event_id`, `debtor_id`, `result_id`, `occurred_at` |
    | `contact_results` | contact result | `result_id`, `label`, `answered`, `right_party` |
 
-   `installment_no = 0` is the first installment, the one the pipeline analyses. A missing payment
+   `installment_no = 0` is the first installment, the one the pipeline analyzes. A missing payment
    is `NULL`, never `0`.
 2. Install the SQL Server extra and configure the connection with environment variables only
    (copy `.env.example`; never commit the real file):
@@ -143,7 +143,7 @@ outside the demo.
    The SQL Server path has not been run against a live server (see Limitations); the extraction
    SQL has been run end to end on SQLite.
 3. Run `delinquency-eda schema`. It lists every missing table and column, the types it found, and
-   any configured status label absent from your catalogue.
+   any configured status label absent from your catalog.
 4. Copy `examples/settings.example.json`, calibrate it on your own data, and pass it with
    `--config`. Every threshold in it is an invented default (see below).
 5. Run `period` to find the window your existing dashboard uses, then `base` and the rest.
@@ -210,7 +210,7 @@ error, not silently ignored.
 | # | Command | What it computes, and why |
 |--:|---|---|
 | 00 | `period` | The funnel (generated, paid on time, overdue unpaid, to mature) over candidate date windows from one fetch, ranked by closeness to counts you already have. A card may not say which window it used. |
-| 01 | `schema` | Which contract tables and columns exist, their types, and whether configured status labels are in the catalogue. Run first against a new database. |
+| 01 | `schema` | Which contract tables and columns exist, their types, and whether configured status labels are in the catalog. Run first against a new database. |
 | 02 | `base` | The dataset bundle: first-installment slips with derived outcomes, the debtor rows of the same people, outreach events, and earlier broken agreements. Everything after it is offline. |
 | 03 | `analysis` | Per factor, concentration of the unpaid value and discrimination of the unpaid rate on the mature cohort, with lift and sample-size flags. |
 | 04 | `drift` | The same slips re-derived at an earlier date: buckets, transitions, the slips that moved, and which value measure a headline figure sums. |
