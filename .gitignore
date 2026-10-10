@@ -33,3 +33,7 @@ mlruns/
 *.sqlite
 *.sqlite3
 reports/
+
+# Local notes
+HANDOFF.md
+NEXT-AI-SUMMARY.md
