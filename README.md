@@ -13,8 +13,9 @@ code.
 Most of the code is about counting the overdue-unpaid bucket correctly:
 
 - "Overdue and not paid on time" counts slips that can still be paid on time (right-censoring), so
-  the bucket is inflated for the most recent due dates, the ones a month-to-date view holds. Stage
-  05 splits the bucket into still open and definitive. Every unpaid rate used to compare groups is
+  the bucket is inflated for the periods that still hold due dates from the last `grace_days` days:
+  month to date, plus the previous month during the first `grace_days` days of a month. Stage 05
+  splits the bucket into still open and definitive. Every unpaid rate used to compare groups is
   computed on the mature cohort, selected by due date alone and never by outcome.
 - Outcomes are derived in Python against the `--as-of` date, never the database server's clock.
   Without the flag, `period`, `base` and `card` use today's local date, so pass it for a run you
@@ -296,7 +297,8 @@ The reasoning for each is in [docs/decisions.md](docs/decisions.md).
   through a fake DB-API connection and by inspecting the generated T-SQL (hints, top-one lookup,
   bound dates, parameter order). The extraction SQL runs end to end only on SQLite.
 - CI runs the suite on Python 3.10, 3.12 and 3.14. `requires-python` is `>=3.10`, so 3.11 and 3.13
-  install but are not in the CI matrix.
+  install but are not in the CI matrix. Development and the local test runs used Python 3.14 on
+  Windows.
 - The default settings (grace period, bands, status labels, exclusion patterns, reliability floors)
   are placeholders so the demo runs. The demo generator is arbitrary too: every constant in it (line
   sizes, ticket scales, zero-balance shares, payment-model coefficients) is a hand-picked value, not

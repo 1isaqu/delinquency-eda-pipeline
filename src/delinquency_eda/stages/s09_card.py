@@ -10,10 +10,11 @@ Slips still inside the grace period are in that number although they can still b
 * the on-time rate **as the card computes it** (over all slips) against the rate **over mature
   slips**, whose denominator cannot move any more.
 
-Closed periods have everything matured, so the two definitions agree there. Only the open period
-(month to date) is affected. Value is shown both as the first installment (the cash that did not
-arrive) and as the whole agreement (what a card summing agreement value displays); stage 04 shows
-how to tell which a headline uses.
+Only a period with due dates in the last ``grace_days`` days is affected: month to date, plus the
+previous month during the first ``grace_days`` days of a month. In any older period every slip has
+matured and the two definitions agree. Value is shown both as the first installment (the cash that
+did not arrive) and as the whole agreement (what a card summing agreement value displays); stage 04
+shows how to tell which a headline uses.
 
 All periods are evaluated from one row fetch over the widest span. ``--from-dataset`` computes the
 same card offline from the dataset bundle.

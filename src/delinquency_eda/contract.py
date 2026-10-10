@@ -79,7 +79,7 @@ TABLES: tuple[TableSpec, ...] = (
     TableSpec(
         "contact_events",
         required=("event_id", "debtor_id", "result_id", "occurred_at"),
-        optional=("debt_owner_id", "agent_id"),
+        optional=("agent_id",),
         meaning="one row per outreach attempt",
     ),
     TableSpec(

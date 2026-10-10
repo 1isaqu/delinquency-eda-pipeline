@@ -9,9 +9,10 @@ the *mature* cohort; the raw bucket is split into *still open* and *definitive*.
 
 Why: Overdue starts the day after the due date, but paid-on-time runs `grace_days` further, so
 the two clocks disagree for the most recent due dates. A bucket defined by "overdue and not paid on
-time" holds slips that can still be paid on time, and it inflates only for the open period.
-Closed periods agree exactly. The same pattern applies to any indicator that compares today with an
-outcome that has a grace period.
+time" holds slips that can still be paid on time, so it inflates only for a period with due dates
+in the last `grace_days` days: month to date, plus the previous month during the first `grace_days`
+days of a month. Older periods agree exactly. The same pattern applies to any indicator that
+compares today with an outcome that has a grace period.
 
 Cost: One more concept to explain, and a smaller denominator.
 

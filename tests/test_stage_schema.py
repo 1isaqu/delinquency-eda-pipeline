@@ -41,6 +41,14 @@ def test_the_test_world_satisfies_the_whole_contract(world):
     assert {t.spec.name for t in line.tables} == {t.name for t in TABLES}
 
 
+def test_contact_events_lists_only_agent_id_as_optional(world):
+    with SQLiteDatabase.open(world) as db:
+        line = check_database(db, "auto", Settings())
+    events = next(t for t in line.tables if t.spec.name == "contact_events")
+    assert events.spec.optional == ("agent_id",)
+    assert events.missing_optional == []
+
+
 def test_a_missing_base_only_table_leaves_the_slip_stages_ready(world):
     connection = sqlite3.connect(world)
     connection.execute("DROP TABLE debtors")

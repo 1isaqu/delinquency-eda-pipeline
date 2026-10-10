@@ -178,11 +178,11 @@ Recomputes the indicator for any number of periods side by side (`--period NAME=
 the open month and the two before). For each period: generated, paid on time, to mature, overdue
 unpaid *as the card counts it*, of which still in grace and of which lost; first-installment and
 whole-agreement value of each; the inflation of the card count; and the on-time rate as the card
-computes it against the rate over mature slips. In a closed period everything has matured and the
-two agree. All periods come from one fetch (`--as-of` sets the date) or from the dataset
-(`--from-dataset`; the dataset fixes the date).
+computes it against the rate over mature slips. Once every due date in a period is more than
+`grace_days` days old, everything has matured and the two agree. All periods come from one fetch
+(`--as-of` sets the date) or from the dataset (`--from-dataset`; the dataset fixes the date).
 
-## 10 `model`: the effect of the term with the mix controlled
+## 10 `model`: the term with the mix controlled
 
 The analysis stage reports the term, the days the agent grants between the agreement and the
 first due date, as one factor among others. Reading its unpaid rate at face value invites the
@@ -197,7 +197,7 @@ associated with more non-payment?*
 | No follow-up counts | reverse causality: if outreach goes to people already slipping, follow-up goes with non-payment |
 | Cross-validation grouped by person | rows of one person are not independent; a row split leaks people across folds |
 | Temporal hold-out | train on early agreements, test on late ones: the second validation |
-| Logistic model and gradient boosting | a transparent model for the effect, a flexible one to see if interactions matter |
+| Logistic model and gradient boosting | a transparent model for the association, a flexible one to see if interactions matter |
 | Numeric imputation inside the pipeline | fitted per fold, never on the test side |
 | A zero balance and a missing debt are separate flags | they mean different things |
 
@@ -211,5 +211,6 @@ separates the term from the mix.
 Read it as an association measured under control, not as proof that changing the term changes
 behavior: people who ask for a long term may already be the people who cannot pay. A randomized
 term is the only design that would settle that. The model is not a scoring tool either: the odds
-ratios and the counterfactual answer the question, and the AUC only shows how well the features
-separate payers from non-payers. Models are fitted in memory and never saved.
+ratios and the counterfactual measure the term's association with non-payment, and the AUC only
+shows how well the features separate payers from non-payers. Models are fitted in memory and never
+saved.
