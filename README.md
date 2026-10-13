@@ -322,7 +322,7 @@ The reasoning for each is in [docs/decisions.md](docs/decisions.md).
 - On some Windows hosts without the `wmic` tool, joblib prints a harmless warning about physical
   core detection during the model stage.
 
-This is an independent portfolio project. It is not affiliated with any company and contains no
+Built from problems I work on in debt collections and rewritten on synthetic data. It contains no
 real data.
 
 ## License

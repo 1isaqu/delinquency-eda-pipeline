@@ -185,7 +185,7 @@ def test_the_readme_has_the_required_sections():
         "## Limitations",
     ):
         assert heading in README, heading
-    assert "independent portfolio project" in README
+    assert "rewritten on synthetic data" in README
     assert "contains no" in README and "real data" in README
 
 
