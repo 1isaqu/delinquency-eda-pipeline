@@ -8,7 +8,7 @@ read the dataset file `base` wrote, so they are repeatable and run on a laptop w
 |--:|---|---|---|
 | 00 | `period` | database | `period.md` |
 | 01 | `schema` | database | `schema.md` |
-| 02 | `base` | database | the dataset file, `base.md` |
+| 02 | `base` | database | the dataset file, `base.md`, `admission.md` (only `admission.md` when the build is rejected) |
 | 03 | `analysis` | dataset | `analysis.md` |
 | 04 | `drift` | dataset | `drift.md` |
 | 05 | `censoring` | dataset | `censoring.md` |
@@ -18,8 +18,9 @@ read the dataset file `base` wrote, so they are repeatable and run on a laptop w
 | 09 | `card` | database, or dataset with `--from-dataset` | `card.md` |
 | 10 | `model` | dataset | `model.md` |
 
-Exit codes: `0` success, `1` a stage ran and reported a failed check (only `schema` does this),
-`2` usage or configuration problem. Errors print an `error: ...` line (a usage error prints the
+Exit codes: `0` success, `1` a stage ran and reported a failed check (`schema` when the database does
+not look like the contract, `base` when a build breaks an entry rule), `2` usage or configuration
+problem, including a dataset file that fails its seal. Errors print an `error: ...` line (a usage error prints the
 usage text before it), never a traceback.
 
 ## The outcome every stage shares
@@ -63,14 +64,32 @@ closeness to the counts you already have.
 
 Run it first against a new database. For every contract table it reports whether the table exists,
 which required columns are missing, which optional ones are, how many extra columns it carries, and
-the types of the required columns it found. It also checks that every status label named in the
-settings exists in `agreement_statuses`, because statuses are resolved by label. Two readiness
-levels: *period/card* (agreements, statuses, agents) and *base* (everything). Exit code `1` when a
-line is not ready for `base`.
+the types of the required columns it found, each judged against the family the contract names for
+it (a date column declared numeric, an amount declared as text and a flag declared as text all
+fail). It also checks that every status label named in the settings exists in
+`agreement_statuses`, because statuses are resolved by label. Two readiness levels: *period/card*
+(agreements, statuses, agents) and *base* (everything). Exit code `1` when a line is not ready for
+`base`. `base` runs the same check first and refuses to extract from a database that fails it.
 
-## 02 `base`: build the dataset
+## 02 `base`: build the dataset, if the data meets the entry contract
 
-Extracts four tables into one JSON file:
+`base` is the door. It checks the database against the contract (the `schema` check), extracts the
+rows, and judges the whole build against the entry rules in `docs/data-contract.md`: the source,
+every row as the driver returned it, the grain and domain of the dataset, and a second, independent
+route to the same numbers. The dataset file is written only if every rule passes.
+
+| Result | Exit code | Writes |
+|---|---|---|
+| admitted | `0` | the dataset file, `base.md`, `admission.md` |
+| rejected | `1` | `admission.md` only. The file already at the dataset path, if any, is left as it was. |
+
+The console names each failed rule with its counts. `admission.md` adds what each rule asks, how to
+fix it, the filter ledger (where the rows of the window went before they became slips) and the
+queries the build ran. There is no option to admit a failing build: repair the view or the
+settings and run `base` again. A dataset file that was not written by an admitted `base` run, or
+that was cut or edited afterwards, is refused by every offline stage (exit code `2`).
+
+An admitted build extracts four tables into one JSON file:
 
 | Table | Content |
 |---|---|

@@ -13,17 +13,18 @@
    |  02 base    09 card             |  06 eda  07 diagnose  08 clean  10 model|
    +----------------+----------------+------------------+----------------------+
                     |                                   |
-            db/ adapters + queries.py             dataset.py  (JSON bundle)
+            db/ adapters + queries.py             dataset.py  (JSON bundle + seal)
           (SQLite | SQL Server dialects)           base | debtors | contacts | breaks
-                    |                                   |
-              read-only SELECTs                  features.py  derive.py  tables.py
-                    |                                   |
-                 database                       reports/*.md  clean_*.csv
+                    |                                   ^
+              read-only SELECTs                         | written only if admitted
+                    |                          admission.py  <-- intake.py (row rules)
+                 database  --------------------->  entry contract (contract.py)
 ```
 
 `base` is the only stage that turns database rows into the dataset file, and every offline stage
 starts from that file. That makes a run repeatable and lets you do the analysis on a machine that
-cannot reach the database.
+cannot reach the database. It is also the gate: the build is judged against the entry contract and
+the file is written only if every rule passes (see below).
 
 ## Layers
 
@@ -34,6 +35,7 @@ cannot reach the database.
 | Stages | `stages/s00_period.py` ... `s10_term_model.py` | Each exposes `add_arguments(parser)` and `run(ctx, args)`. Pure computation lives in plain functions next to `run`, so tests call it without a database or a command line. The registry in `stages/__init__.py` is the single list the CLI, the README table and the tests read. |
 | Domain | `derive.py`, `features.py`, `tables.py`, `bands.py` | The outcome rule, row-level features, the shared group tables, right-closed bands. No I/O. |
 | Data access | `db/`, `queries.py`, `dataset.py`, `contract.py`, `sqlutil.py` | Adapters, SQL text builders, normalization into the dataset, the contract definition, the read-only guard. |
+| Admission | `intake.py`, `admission.py` | Judges a build against the entry rules and decides whether a dataset exists at all. `intake.py` sees each row as the driver returned it and logs every query; `admission.py` adds the dataset rules and the second route. Neither writes a file: the stage does. |
 | Support | `config.py`, `dates.py`, `report.py`, `textutil.py`, `env.py`, `errors.py` | Validated settings, date and number normalization, a Markdown builder, small helpers. |
 
 ## Data access
@@ -75,14 +77,52 @@ limits. A test proves a tiny chunk size returns the same dataset as a large one.
 ## The dataset bundle
 
 `Dataset` is one JSON file: a `meta` block (period, reference date, grace days, the status labels
-and agent patterns used, a schema version) and four tables. `Dataset.load` rejects a file with a
-different schema version instead of guessing. Every key is prefixed with the product line.
+and agent patterns used, a schema version), four tables, the admission record and a seal.
+`Dataset.load` rejects a file with a different schema version instead of guessing. Every key is
+prefixed with the product line.
 
 `features.enrich` joins the tables in memory. It groups debtor rows into people by `person_key`,
 gathers a person's follow-up inside the window from agreement to due date, counts earlier broken
 agreements made before this one, and derives the installment-to-debt ratio with its state.
 `features.analysis_frame` adds the bands, the portfolio group and the maturity flag, using the grace
 period the dataset was built with (the one that produced its `bucket` column).
+
+## Admission
+
+```
+ schema check (s01) --fail--> rejected: nothing is extracted
+        | pass
+        v
+ build_dataset  --every row--> Intake.accept   row.required  row.readable  row.payment
+        |                      Intake.run      fingerprint + rows of every query
+        v
+ check_grain  check_domain                      key.grain  base.domain
+        |
+        v
+ reconcile (second route)                       row.due_date  ref.*  recon.*
+        |
+        v
+ Admission.passed?  --no--> admission.md, exit 1, no dataset
+        | yes
+        v
+ dataset.admission = record --> Dataset.save (seals) --> dataset file
+```
+
+The rules are data (`contract.RULES`), so the report, the docs and the tests read one list. Each
+rule produces a `RuleResult`: how many items it examined, how many broke it, and a few lines of
+counts. A rule that cannot be judged because an earlier one failed is `skipped`, never `pass`.
+`Admission.passed` is true only if every rule is `pass`.
+
+Three choices keep the gate honest:
+
+- `Dataset.save` refuses a dataset without a passed admission record, so no code path can write a
+  file that skipped the gate. `Dataset.load` refuses a file whose content no longer matches its
+  seal. The offline tests build datasets by hand, some of them dirty on purpose, and give them an
+  explicit fixture record that says so in the file.
+- The second route shares nothing with the extraction that could fail the same way. It has no
+  ranking function, no join to a reference table and its own copy of the outcome rule, in SQL.
+  Where the two disagree, one of them is wrong, and the report prints both numbers.
+- Reports and the stored record hold counts and column names, never a key, an id or a value.
 
 ## Reproducibility
 
@@ -104,6 +144,8 @@ period the dataset was built with (the one that produced its `bucket` column).
 | Extraction | SQL text for both dialects, then the real SQL against a small SQLite world where each rule has one row that proves it |
 | Adapters | the SQL Server adapter through a fake DB-API connection; the password never reaches an error message |
 | Stages | each stage's computation on rows built to trigger it, then its report and its CLI |
+| Admission | each rule against a small SQLite world broken in exactly one way, and the second route against a dataset changed one number at a time |
+| Seal | a file cut, edited, resealed or from before the contract is refused by every offline stage |
 | End to end | the whole pipeline on the seeded demo databases, which plant the situations each stage should find |
 
 All fixtures are inline invented rows or the seeded generator. No fixture file holds a realistic

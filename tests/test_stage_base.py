@@ -2,11 +2,15 @@
 
 from __future__ import annotations
 
+import json
+
+from delinquency_eda.cli import build_parser
 from delinquency_eda.dataset import Dataset
 from delinquency_eda.stages.s02_base import render, summarize
 
 from clirun import run_cli, sqlite_args
 from frames import dataset, paid_on_time, raw
+from world import damage
 
 BUILD = ["base", "--from", "2026-03-01", "--to", "2026-03-31", "--as-of", "2026-03-31"]
 
@@ -79,3 +83,74 @@ def test_a_reversed_period_is_reported_not_raised(world, tmp_path):
         "base", "--from", "2026-03-31", "--to", "2026-03-01",
     )  # fmt: skip
     assert code == 2
+
+
+# ---- the gate ------------------------------------------------------------------------------
+
+
+def build(world, tmp_path, name="dataset.json"):
+    target = tmp_path / name
+    code, out = run_cli(
+        *sqlite_args(("auto", world)),
+        "--dataset", str(target), "--out-dir", str(tmp_path / "r"), *BUILD,
+    )  # fmt: skip
+    return code, out, target
+
+
+def test_admitted_build(world, tmp_path):
+    code, out, target = build(world, tmp_path)
+    assert code == 0 and "entry contract: all 15 rules passed" in out
+    assert (tmp_path / "r" / "base.md").exists()
+    admission = (tmp_path / "r" / "admission.md").read_text(encoding="utf-8")
+    assert "**Result: ADMITTED.**" in admission
+    assert "15 of 15 rules passed" in (tmp_path / "r" / "base.md").read_text(encoding="utf-8")
+    record = json.loads(target.read_text(encoding="utf-8"))["admission"]
+    assert record["passed"] is True and len(record["rules"]) == 15
+
+
+def test_rejected_build(world, tmp_path):
+    damage(world, "UPDATE agreements SET paid_amount = 0 WHERE row_id = 1")
+    code, out, target = build(world, tmp_path)
+    assert code == 1
+    assert not target.exists()
+    assert "rejected: 1 entry rule(s) failed; no dataset was written" in out
+    assert "row.payment: 1 violation(s)" in out
+    assert "not judged, because an earlier rule failed" in out
+    assert not (tmp_path / "r" / "base.md").exists(), "base.md describes a missing dataset"
+    admission = (tmp_path / "r" / "admission.md").read_text(encoding="utf-8")
+    assert "**Result: REJECTED.**" in admission and "row.payment" in admission
+
+
+def test_rejection_keeps_old_file(world, tmp_path):
+    code, _, target = build(world, tmp_path)
+    assert code == 0
+    before = target.read_bytes()
+    damage(world, "DELETE FROM debtors WHERE debtor_id = 2")
+    code, out, _ = build(world, tmp_path)
+    assert code == 1
+    assert target.read_bytes() == before
+    assert f"the file at {target} was left as it was" in out
+    assert "was left as it was" in (tmp_path / "r" / "admission.md").read_text(encoding="utf-8")
+
+
+def test_bad_source_not_queried(world, tmp_path):
+    damage(world, "DROP TABLE contact_results")
+    code, out, target = build(world, tmp_path)
+    assert code == 1 and not target.exists()
+    assert "source.tables: 1 violation(s)" in out
+    assert "auto.contact_results: table not found" in out
+
+
+def test_no_bypass_option():
+    """The options of ``base`` are its window and its date, and the options every stage shares."""
+    parser = build_parser()
+    base = next(
+        action.choices["base"]
+        for action in parser._actions
+        if hasattr(action, "choices") and action.choices and "base" in action.choices
+    )
+    shared = {
+        "-h", "--help", "--backend", "--source", "--env-file", "--config", "--dataset", "--out-dir",
+    }  # fmt: skip
+    flags = {opt for action in base._actions for opt in action.option_strings}
+    assert flags - shared == {"--from", "--to", "--as-of"}

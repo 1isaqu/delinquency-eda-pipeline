@@ -34,6 +34,12 @@ Most of the code is about counting the overdue-unpaid bucket correctly:
   and stay different.
 - The reports call their results associations and name the design that would show cause (a
   randomized term).
+- Data enters through a contract. `base` judges every build against a list of entry rules:
+  required values, values that read as what the contract says, one slip per agreement, the links
+  between tables, and a second route in SQL that must give the same counts and sums as the
+  extraction. It writes the dataset only if all of them pass. A rejected build leaves a report and
+  no dataset, and every offline stage refuses a dataset file that was cut or edited after `base`
+  wrote it.
 
 ## Architecture
 
@@ -55,7 +61,8 @@ Most of the code is about counting the overdue-unpaid bucket correctly:
 ```
 
 `base` is the only stage that turns database rows into the dataset file, and every offline stage
-starts from that file. More in [docs/architecture.md](docs/architecture.md).
+starts from that file. It is also the gate: the file is written only if the build meets the entry
+contract. More in [docs/architecture.md](docs/architecture.md).
 
 ## Quick start
 
@@ -94,12 +101,12 @@ $env:DEA_SOURCES = "auto=data/demo/auto.db,consumer=data/demo/consumer.db"
 $env:DEA_CONFIG = "examples/settings.example.json"
 ```
 
-Reports are Markdown files under `reports/`; the dataset is `data/dataset.json`; both are
-gitignored. `delinquency-eda --help` lists the stages and `delinquency-eda <stage> --help` its
-options. Global options (`--dataset`, `--out-dir`, `--config`, `--backend`, `--source`,
-`--env-file`) may come before or after the stage name. The `model` stage is the slow one because of
-the gradient-boosting model and permutation importance. On the demo data it takes under a minute on
-a CI runner and several minutes on a slow or busy machine.
+Reports are Markdown files under `reports/` (`base` also writes an admission report there); the
+dataset is `data/dataset.json`; both are gitignored. `delinquency-eda --help` lists the stages and
+`delinquency-eda <stage> --help` its options. Global options (`--dataset`, `--out-dir`, `--config`,
+`--backend`, `--source`, `--env-file`) may come before or after the stage name. The `model` stage
+is the slow one because of the gradient-boosting model and permutation importance. On the demo
+data it takes under a minute on a CI runner and several minutes on a slow or busy machine.
 
 The demo plants situations the stages should find: a term effect on payment, slips still inside
 their grace window, a pseudo-agent that passes the default exclusion patterns and never collects,
@@ -161,11 +168,16 @@ tiers of data (synthetic demo, public datasets, your own data).
    access control still has to come from a read-only login.
    The SQL Server path has not been run against a live server (see Limitations); the extraction
    SQL has been run end to end on SQLite.
-3. Run `delinquency-eda schema`. It lists every missing table and column, the types it found, and
-   any configured status label absent from your catalog.
+3. Run `delinquency-eda schema`. It lists every missing table and column, the types it found
+   (a column declared with a type the contract cannot read, such as a date held as a number, is
+   reported), and any configured status label absent from your catalog.
 4. Copy `examples/settings.example.json`, calibrate it on your own data, and pass it with
    `--config`. Every threshold in it is an invented default (see below).
-5. Run `period` to find the window your existing dashboard uses, then `base` and the rest.
+5. Run `period` to find the window your existing dashboard uses, then `base`. It writes the
+   dataset only if the data meets the entry contract (the rules are in
+   [docs/data-contract.md](docs/data-contract.md)). If it refuses, the admission report names the
+   rule, the number of rows that broke it and how to fix it; repair the view and run `base` again.
+   Then run the rest.
 
 ## Configuration
 
@@ -228,8 +240,8 @@ and the tests run; calibrate each on your own data. Unknown keys are an error.
 | # | Command | What it computes, and why |
 |--:|---|---|
 | 00 | `period` | The funnel (generated, paid on time, overdue unpaid, to mature) over candidate date windows from one fetch, ranked by closeness to counts you already have. Use it when a card does not say which window it covers. |
-| 01 | `schema` | Which contract tables and columns exist, their types, and whether configured status labels are in the catalog. Run first against a new database. |
-| 02 | `base` | The dataset bundle: first-installment slips with derived outcomes, the debtor rows of the same people, outreach events, and earlier broken agreements. Stages 03 to 08 and 10 read only this file. |
+| 01 | `schema` | Which contract tables and columns exist, whether their types fit the contract, and whether configured status labels are in the catalog. Run first against a new database. |
+| 02 | `base` | The dataset bundle: first-installment slips with derived outcomes, the debtor rows of the same people, outreach events, and earlier broken agreements. Written only if the build meets the entry contract; otherwise an admission report and exit code 1. Stages 03 to 08 and 10 read only this file. |
 | 03 | `analysis` | Per factor, concentration of the unpaid value and discrimination of the unpaid rate on the mature cohort, with lift and sample-size flags. |
 | 04 | `drift` | The same slips re-derived at an earlier date: buckets, transitions, the slips that moved, and which value measure a headline figure sums. |
 | 05 | `censoring` | The unpaid bucket split into still open and definitive, the inflation of the naive count, and the on-time rate with and without the maturity cut. |
@@ -251,8 +263,10 @@ ruff check .            # lint
 Fixtures are inline invented rows or the seeded demo generator; no fixture file holds a realistic
 row. The suite covers the SQL text for both dialects, the real SQL on a small SQLite world where
 each extraction rule has one row that proves it, every stage's computation on rows built to trigger
-it, the command line, the README itself (its commands parse and its tables match the code), and the
-whole pipeline end to end on the demo databases. The model tests are the slowest.
+it, the command line, the README itself (its commands parse and its tables match the code), the
+entry contract (each rule against a database broken in exactly one way, and a dataset file that is
+cut or edited), and the whole pipeline end to end on the demo databases. The model tests are the
+slowest.
 
 ## Project layout
 
@@ -261,7 +275,8 @@ src/delinquency_eda/
   cli.py  context.py  config.py     command line, run context, validated settings
   derive.py  features.py  tables.py outcome rule, row-level features, shared group tables
   bands.py  dates.py  report.py     bands, normalization, Markdown builder
-  queries.py  dataset.py  contract.py  SQL builders, the dataset bundle, the contract
+  queries.py  dataset.py  contract.py  SQL builders, the dataset bundle, the contract and its rules
+  intake.py  admission.py             row-level entry rules, the verdict on a build and its report
   sqlutil.py  textutil.py  env.py   read-only guard, text folding, .env reader
   db/                               adapter protocol, SQLite and SQL Server adapters, dialects
   stages/                           s00_period.py ... s10_term_model.py and the registry
@@ -290,6 +305,8 @@ The reasoning for each is in [docs/decisions.md](docs/decisions.md).
 - Validation groups by person and holds out by time. Term bands are compared against a stated
   reference band.
 - The analysis and model reports call their results associations.
+- Data enters through a contract or not at all, a second SQL route checks the extraction, and the
+  dataset file is sealed.
 
 ## Limitations
 
@@ -317,6 +334,13 @@ The reasoning for each is in [docs/decisions.md](docs/decisions.md).
   Windows machine built the features (`analysis_frame`) for 20,000 invented slips and 80,000
   contacts in about four seconds; the time depends on the machine. The model stage costs far more,
   and nothing is tuned for millions of rows.
+- The entry contract checks what it can state: required and readable values, keys, links, and
+  whether two routes through the same database agree. It cannot tell that a value is true. The
+  second route shares the database, the window and the reference date with the extraction, so
+  agreement means the extraction followed the contract, not that the source is right. Its T-SQL
+  (including `TRY_CAST`, SQL Server 2012 or later) has not run against a live server either.
+- The seal on the dataset file catches a file that was cut, edited or not written by `base`. Anyone
+  who can edit the file can also recompute the seal, so it is not protection against tampering.
 - `data/dataset.json` holds the opaque keys and agent identifiers your database supplies. Keep it
   out of version control and treat it like the source data.
 - On some Windows hosts without the `wmic` tool, joblib prints a harmless warning about physical

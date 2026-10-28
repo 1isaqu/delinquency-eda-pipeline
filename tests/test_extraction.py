@@ -9,6 +9,7 @@ from datetime import date
 import pytest
 
 from delinquency_eda import derive
+from delinquency_eda.admission import admit
 from delinquency_eda.config import Settings
 from delinquency_eda.contract import TABLE_NAMES
 from delinquency_eda.dataset import Dataset, build_dataset, fetch_slips
@@ -27,8 +28,13 @@ from delinquency_eda.queries import (
     build_breaks_query,
     build_contacts_query,
     build_person_debtors_query,
+    build_reconcile_breaks_query,
+    build_reconcile_contacts_query,
+    build_reconcile_slips_query,
     build_slip_query,
 )
+from delinquency_eda.sqlutil import ensure_read_only
+from delinquency_eda.stages.s01_schema import check_database
 
 from world import make_world
 
@@ -53,7 +59,16 @@ def all_queries(dialect):
     debtors = build_person_debtors_query(dialect, ["k1", "k2"])
     contacts = build_contacts_query(dialect, [1, 2], START, END)
     breaks = build_breaks_query(dialect, SETTINGS, [1, 2])
-    return [detail, lean, debtors, contacts, breaks]
+    return [detail, lean, debtors, contacts, breaks, *reconcile_queries(dialect)]
+
+
+def reconcile_queries(dialect):
+    """The second route: a different shape of SQL, held to the same rules as the first."""
+    return [
+        build_reconcile_slips_query(dialect, SETTINGS, START, END, AS_OF),
+        build_reconcile_contacts_query(dialect, [1, 2], START, END),
+        build_reconcile_breaks_query(dialect, SETTINGS, [1, 2]),
+    ]
 
 
 def test_every_table_reference_carries_nolock_on_sql_server():
@@ -116,6 +131,53 @@ def test_in_lists_have_one_marker_per_value():
     q = build_breaks_query(SQLiteDialect(), SETTINGS, [5, 6, 7])
     assert q.params == ("BROKEN", "AUTO_BROKEN", 5, 6, 7)
     assert q.sql.count("?") == 5
+
+
+@pytest.mark.parametrize("dialect", [SQLiteDialect(), SQLServerDialect()], ids=["sqlite", "tsql"])
+def test_recon_sql_is_read_only(dialect):
+    for query in reconcile_queries(dialect):
+        ensure_read_only(query.sql)
+        assert query.sql.count("?") == len(query.params)
+
+
+def test_recon_sql_is_independent():
+    # The second route must not be able to fail the way the first one can.
+    for dialect in (SQLiteDialect(), SQLServerDialect()):
+        for query in reconcile_queries(dialect):
+            assert "ROW_NUMBER" not in query.sql
+            assert "LEFT JOIN" not in query.sql and "INNER JOIN" not in query.sql
+            assert "OUTER APPLY" not in query.sql
+
+
+def test_recon_date_binding():
+    server = build_reconcile_slips_query(SQLServerDialect(), SETTINGS, START, END, AS_OF)
+    lite = build_reconcile_slips_query(SQLiteDialect(), SETTINGS, START, END, AS_OF)
+    assert server.params[:2] == (date(2026, 3, 1), date(2026, 4, 1))
+    assert lite.params[:2] == ("2026-03-01", "2026-04-01")
+    assert server.params[-2:] == (AS_OF, AS_OF) and lite.params[-2:] == ("2026-03-31",) * 2
+    contacts = build_reconcile_contacts_query(SQLiteDialect(), [7, 8], START, END)
+    assert contacts.params == ("2026-03-01", "2026-04-01", 7, 8) * 2
+    breaks = build_reconcile_breaks_query(SQLiteDialect(), SETTINGS, [7, 8])
+    assert breaks.params == ("BROKEN", "AUTO_BROKEN", 7, 8)
+
+
+def test_recon_date_arithmetic():
+    lite = build_reconcile_slips_query(SQLiteDialect(), SETTINGS, START, END, AS_OF).sql
+    server = build_reconcile_slips_query(SQLServerDialect(), SETTINGS, START, END, AS_OF).sql
+    assert "date(date(l.due_at), '+3 days')" in lite and "date(l.paid_at) <= ?" in lite
+    assert "DATEADD(day, 3, CAST(l.due_at AS date))" in server
+    assert "TRY_CAST(z.due_at AS date) IS NULL" in server and "date(z.due_at) IS NULL" in lite
+    longer = build_reconcile_slips_query(
+        SQLiteDialect(), Settings(grace_days=10), START, END, AS_OF
+    ).sql
+    assert "'+10 days'" in longer
+
+
+def test_recon_without_agent_patterns():
+    settings = Settings(excluded_agent_patterns=())
+    query = build_reconcile_slips_query(SQLiteDialect(), settings, START, END, AS_OF)
+    assert "LIKE" not in query.sql
+    assert query.sql.count("?") == len(query.params)
 
 
 def test_schema_qualifies_every_table():
@@ -253,10 +315,19 @@ def test_dataset_links_debtors_contacts_and_breaks_across_product_lines(two_line
 
 
 def test_dataset_round_trips_through_json(two_lines, tmp_path):
-    ds = build_dataset(two_lines, SETTINGS, date_from=START, date_to=END, as_of=AS_OF)
+    verdict = admit(
+        two_lines,
+        SETTINGS,
+        {name: check_database(db, name, SETTINGS) for name, db in two_lines.items()},
+        date_from=START,
+        date_to=END,
+        as_of=AS_OF,
+    )
+    assert verdict.passed, [r.detail for r in verdict.failed]
+    ds = verdict.dataset
     path = ds.save(tmp_path / "out" / "dataset.json")
     again = Dataset.load(path)
-    assert again.meta == ds.meta
+    assert again.meta == ds.meta and again.admission == ds.admission
     assert again.base == ds.base and again.contacts == ds.contacts and again.breaks == ds.breaks
 
 

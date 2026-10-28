@@ -150,3 +150,54 @@ make them look more predictive than they are.
 
 Cost: If you only keep a current balance, you need a snapshot view, or you read the odds ratios
 with those two controls marked as leakage-suspect.
+
+## 17. Data enters through a contract, or not at all
+
+Decision: `base` judges every build against the entry contract (`docs/data-contract.md`) and
+writes the dataset only if every rule passes. There is no option to let a failing build through,
+and `Dataset.save` refuses a dataset that has no passed admission record.
+
+Why: A report that says a column is dirty does not stop the next stage from reading it, and a
+number built on it carries no warning. A finding that stops nothing is read after the fact, if at
+all. Putting the check at the one door every row passes through makes "this dataset met the
+contract" true of every file the other stages can read. An override would turn the contract into
+advice.
+
+Cost: A first run against a real database can be rejected, and the repair belongs in the view
+that maps the database onto the contract. A rule that is too strict for a database has no
+workaround except changing the data, so the rules are limited to what the contract already says
+(a column is not null, a flag is 0 or 1, a payment is NULL or positive) and to what would change a
+count without any error (a duplicate key, a row the window cannot see).
+
+## 18. Check the extraction against a second route, not against itself
+
+Decision: After the extraction, a second set of queries computes the same counts and sums by a
+different route: the latest write of an installment is the one with no newer write (no
+`ROW_NUMBER`), every lookup is an `EXISTS` (no join that can multiply rows), and the outcome rule
+is written again in SQL. Per product line the two must agree on slips, buckets, first-installment
+value, whole-agreement value, installment count, contact events and earlier breaks.
+
+Why: A check on the rows cannot see a row that the query multiplied, dropped or reclassified. A
+duplicate debtor id doubles every slip that joins to it, and every later count is still
+consistent with the doubled rows. Only another route to the number shows it. The routes share the
+database, the window and the reference date, so agreement says the extraction did what the
+contract says with the data, not that the data is true.
+
+Cost: One aggregate query per product line and two per chunk of debtor ids, and a second copy of
+the outcome rule that has to follow `derive.py`. The tests compare the two on the test world and
+on the demo databases, and change the dataset one number at a time to prove each comparison can
+fail.
+
+## 19. Seal the file, and keep the verdict inside it
+
+Decision: The dataset file carries the admission record and a seal (a SHA-256 of everything else
+in the file, and the row count of each table). Every offline stage verifies the seal before it
+reads a row. The format version moved to 2, so a file written before the contract is refused with
+the instruction to rebuild it.
+
+Why: The offline stages run where the database is not reachable, so the file is the only evidence
+that the data was admitted. Without a seal, a half-copied or hand-edited file produces numbers
+that look like any others.
+
+Cost: The seal detects accidents, not tampering: whoever can edit the file can recompute it. Old
+files have to be rebuilt with `base`.

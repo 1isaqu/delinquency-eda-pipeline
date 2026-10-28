@@ -4,7 +4,9 @@ Global options (``--backend``, ``--source``, ``--env-file``, ``--config``, ``--d
 ``--out-dir``) may be written before or after the subcommand. Connection settings never appear on
 the command line: they come from ``DEA_DB_*`` environment variables (see ``.env.example``).
 
-Exit codes: 0 success, 1 a stage ran and reported a failed check, 2 usage or configuration error.
+Exit codes: 0 success, 1 a stage ran and reported a failed check (``schema``; ``base`` when the
+data breaks an entry rule), 2 usage or configuration error, including a dataset file that fails
+its seal.
 """
 
 from __future__ import annotations

@@ -6,7 +6,8 @@ Server in real use. Only these differ:
 
 * table hints: SQL Server reads carry ``WITH (NOLOCK)``, SQLite has no such hint,
 * top-one lookups: ``OUTER APPLY (SELECT TOP 1 ...)`` versus a scalar subquery with ``LIMIT 1``,
-* date parameters: real ``date`` objects for the ODBC driver, ISO text for SQLite.
+* date parameters: real ``date`` objects for the ODBC driver, ISO text for SQLite,
+* calendar-day arithmetic, which only the admission queries use (they re-derive the outcome in SQL).
 """
 
 from __future__ import annotations
@@ -35,6 +36,18 @@ class Dialect(ABC):
         Exactly one label is taken (lowest ``debt_id`` first) so that no join can multiply rows.
         """
 
+    @abstractmethod
+    def day(self, expression: str) -> str:
+        """The calendar day of a date or datetime expression; only the day is ever compared."""
+
+    @abstractmethod
+    def plus_days(self, day_expression: str, days: int) -> str:
+        """``day_expression`` moved forward by a whole number of days."""
+
+    @abstractmethod
+    def unreadable_day(self, expression: str) -> str:
+        """A condition that holds when the expression is NULL or does not read as a date."""
+
 
 class SQLServerDialect(Dialect):
     name = "sqlserver"
@@ -62,6 +75,15 @@ class SQLServerDialect(Dialect):
         )
         return join, "pl.portfolio_label"
 
+    def day(self, expression: str) -> str:
+        return f"CAST({expression} AS date)"
+
+    def plus_days(self, day_expression: str, days: int) -> str:
+        return f"DATEADD(day, {int(days)}, {day_expression})"
+
+    def unreadable_day(self, expression: str) -> str:
+        return f"TRY_CAST({expression} AS date) IS NULL"
+
 
 class SQLiteDialect(Dialect):
     name = "sqlite"
@@ -87,3 +109,12 @@ class SQLiteDialect(Dialect):
             "     LIMIT 1)"
         )
         return "", expr
+
+    def day(self, expression: str) -> str:
+        return f"date({expression})"
+
+    def plus_days(self, day_expression: str, days: int) -> str:
+        return f"date({day_expression}, '+{int(days)} days')"
+
+    def unreadable_day(self, expression: str) -> str:
+        return f"date({expression}) IS NULL"
