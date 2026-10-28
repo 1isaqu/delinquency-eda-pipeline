@@ -49,12 +49,12 @@ def test_parse_window():
 @pytest.mark.parametrize(
     "bad", ["", "march", "march=2026-03-01", "=2026-03-01:2026-03-02", "m=x:y"]
 )
-def test_parse_window_rejects_malformed_specs(bad):
+def test_malformed_window(bad):
     with pytest.raises(ConfigError):
         parse_window(bad)
 
 
-def test_a_window_cannot_end_before_it_starts():
+def test_reversed_window():
     with pytest.raises(ConfigError, match="ends before"):
         Window("w", date(2026, 3, 2), date(2026, 3, 1))
 
@@ -69,7 +69,7 @@ def test_parse_reference():
             parse_reference(bad)
 
 
-def test_default_windows_follow_the_reference_date():
+def test_default_windows():
     names = {w.name: w for w in default_windows(date(2026, 3, 15))}
     assert names["month to date"].start == date(2026, 3, 1)
     assert names["month to yesterday"].end == date(2026, 3, 14)
@@ -79,14 +79,14 @@ def test_default_windows_follow_the_reference_date():
     )
 
 
-def test_default_windows_drop_duplicates_on_the_first_of_the_month():
+def test_first_of_month():
     windows = default_windows(date(2026, 3, 1))
     spans = [(w.start, w.end) for w in windows]
     assert len(spans) == len(set(spans))
     assert all(w.end >= w.start for w in windows)
 
 
-def test_the_funnel_partitions_the_slips_in_the_window():
+def test_funnel_partition():
     march = Window("march", date(2026, 3, 1), date(2026, 3, 31))
     f = funnel(SLIPS, march)
     assert f.generated == 4  # the 02-28 slip is outside
@@ -97,12 +97,12 @@ def test_the_funnel_partitions_the_slips_in_the_window():
     assert f.amount_received == 100.0
 
 
-def test_both_ends_of_a_window_are_inclusive():
+def test_inclusive_window():
     one_day = Window("d", date(2026, 3, 5), date(2026, 3, 5))
     assert funnel(SLIPS, one_day).generated == 1
 
 
-def test_distance_and_ranking_use_only_the_reference_keys_given():
+def test_distance_ranking():
     march = funnel(SLIPS, Window("march", date(2026, 3, 1), date(2026, 3, 31)))
     day = funnel(SLIPS, Window("day", date(2026, 3, 5), date(2026, 3, 5)))
     assert distance(march, {"generated": 4}) == 0
@@ -111,11 +111,11 @@ def test_distance_and_ranking_use_only_the_reference_keys_given():
     assert ranked == [("march", 0), ("day", 3)]
 
 
-def test_the_funnel_keys_are_the_documented_four():
+def test_funnel_keys():
     assert FUNNEL_KEYS == ("generated", "to_mature", "overdue_unpaid", "paid_on_time")
 
 
-def test_cli_evaluates_windows_against_a_database(world, tmp_path):
+def test_cli_windows(world, tmp_path):
     out_dir = tmp_path / "reports"
     code, out = run_cli(
         *sqlite_args(("auto", world)),
@@ -132,7 +132,7 @@ def test_cli_evaluates_windows_against_a_database(world, tmp_path):
     assert "Closest window: **march**" in text
 
 
-def test_cli_without_sources_is_a_configuration_error(tmp_path):
+def test_cli_without_sources(tmp_path):
     code, _ = run_cli("period", "--out-dir", str(tmp_path), "--backend", "sqlite")
     assert code == 2
 

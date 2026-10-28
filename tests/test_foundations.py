@@ -19,7 +19,7 @@ from delinquency_eda.sqlutil import chunked, ensure_read_only, placeholders
 # ---- bands ---------------------------------------------------------------------------------
 
 
-def test_int_bands_are_right_closed_and_labeled():
+def test_int_bands():
     bands = Bands((0, 2, 5))
     assert bands.labels == ["<=0", "1-2", "3-5", ">5"]
     assert [bands.label(v) for v in (-3, 0, 1, 2, 3, 5, 6)] == [
@@ -27,7 +27,7 @@ def test_int_bands_are_right_closed_and_labeled():
     ]  # fmt: skip
 
 
-def test_single_value_band_label_is_not_a_range():
+def test_single_value_band():
     assert Bands((1, 2, 6)).labels == ["<=1", "2", "3-6", ">6"]
 
 
@@ -56,7 +56,7 @@ def test_edges_must_increase():
 # ---- dates ---------------------------------------------------------------------------------
 
 
-def test_to_date_accepts_every_driver_shape():
+def test_to_date_shapes():
     assert to_date(datetime(2026, 3, 1, 23, 59)) == date(2026, 3, 1)
     assert to_date(date(2026, 3, 1)) == date(2026, 3, 1)
     assert to_date("2026-03-01 10:11:12") == date(2026, 3, 1)
@@ -102,7 +102,7 @@ def test_defaults_validate():
     assert settings.grace_days >= 0
 
 
-def test_settings_from_mapping_overrides_and_converts_lists():
+def test_settings_from_mapping():
     s = Settings.from_mapping({"grace_days": 7, "term_band_edges": [1, 4], "model": {"folds": 3}})
     assert s.grace_days == 7
     assert s.term_band_edges == (1, 4)
@@ -110,7 +110,7 @@ def test_settings_from_mapping_overrides_and_converts_lists():
     assert s.model.random_state == 42
 
 
-def test_settings_reject_unknown_and_invalid_values():
+def test_invalid_settings():
     with pytest.raises(ConfigError, match="unknown setting"):
         Settings.from_mapping({"grace": 3})
     with pytest.raises(ConfigError, match="unknown model setting"):
@@ -138,7 +138,7 @@ def test_settings_reject_unknown_and_invalid_values():
         (None, "(no portfolio)"),
     ],
 )
-def test_default_portfolio_group_pattern_strips_a_trailing_number(label, group):
+def test_portfolio_group_pattern(label, group):
     from delinquency_eda.features import portfolio_group
 
     assert portfolio_group(label, Settings().portfolio_group_pattern) == group
@@ -214,7 +214,7 @@ def test_md_table_formats_cells():
     assert lines[3] == "|  | 5 |  |"
 
 
-def test_md_table_from_rows_and_alignment():
+def test_md_table_rows():
     text = md_table([[1, True]], ["a", "b"], align_right=["a"])
     assert text.splitlines()[1] == "|---:|---|"
     assert text.splitlines()[2] == "| 1 | yes |"

@@ -32,14 +32,14 @@ def slips():
     return dataset(ROWS).base
 
 
-def test_the_open_month_separates_lost_from_still_in_grace(slips):
+def test_open_month(slips):
     r = card_row(slips, MARCH, 3)
     assert (r.generated, r.paid_on_time, r.to_mature) == (4, 1, 0)
     assert (r.as_counted, r.in_grace, r.lost) == (3, 2, 1)
     assert r.as_counted == r.in_grace + r.lost
 
 
-def test_values_are_reported_as_first_installment_and_whole_agreement(slips):
+def test_value_measures(slips):
     r = card_row(slips, MARCH, 3)
     assert r.value_in_grace == pytest.approx(200.0)
     assert r.value_lost == pytest.approx(100.0)
@@ -47,7 +47,7 @@ def test_values_are_reported_as_first_installment_and_whole_agreement(slips):
     assert r.value_lost_whole == pytest.approx(300.0)
 
 
-def test_inflation_and_the_two_on_time_rates(slips):
+def test_inflation_and_rates(slips):
     r = card_row(slips, MARCH, 3)
     assert r.inflation == pytest.approx(3.0)
     assert r.rate_as_card == pytest.approx(1 / 4)  # over every slip, matured or not
@@ -55,24 +55,24 @@ def test_inflation_and_the_two_on_time_rates(slips):
     assert r.rate_mature == pytest.approx(1 / 2)
 
 
-def test_a_closed_period_agrees_with_both_definitions(slips):
+def test_closed_period(slips):
     r = card_row(slips, FEBRUARY, 3)
     assert (r.as_counted, r.lost, r.in_grace) == (1, 1, 0)
     assert r.inflation == pytest.approx(1.0)
 
 
-def test_empty_periods_have_undefined_ratios(slips):
+def test_empty_periods(slips):
     r = card_row(slips, Window("none", date(2020, 1, 1), date(2020, 1, 31)), 3)
     assert r.generated == 0
     assert math.isnan(r.inflation) and math.isnan(r.rate_as_card) and math.isnan(r.rate_mature)
 
 
-def test_the_boundary_day_depends_on_the_configured_grace(slips):
+def test_boundary_day(slips):
     assert card_row(slips, MARCH, 4).lost == 0  # with 4 days of grace row 2 is still open
     assert card_row(slips, MARCH, 2).lost == 2  # with 2 days, row 3 is lost too
 
 
-def test_default_periods_are_the_open_month_and_the_two_before():
+def test_default_periods():
     periods = default_periods(date(2026, 3, 15))
     assert [p.name for p in periods] == ["month to date", "previous month", "two months back"]
     assert periods[0].start == date(2026, 3, 1) and periods[0].end == date(2026, 3, 15)
@@ -80,7 +80,7 @@ def test_default_periods_are_the_open_month_and_the_two_before():
     assert (periods[2].start, periods[2].end) == (date(2026, 1, 1), date(2026, 1, 31))
 
 
-def test_the_report_has_one_column_per_period(slips):
+def test_report_columns(slips):
     rows = card(slips, [MARCH, FEBRUARY], 3)
     text = render(rows, date(2026, 3, 31), 3).render()
     header = next(line for line in text.splitlines() if line.startswith("| indicator"))
@@ -88,7 +88,7 @@ def test_the_report_has_one_column_per_period(slips):
     assert "inflation of the card count" in text
 
 
-def test_cli_from_dataset_uses_the_dataset_date_and_rejects_as_of(tmp_path):
+def test_cli_from_dataset(tmp_path):
     path = dataset(ROWS).save(tmp_path / "ds.json")
     base = ["card", "--dataset", str(path), "--out-dir", str(tmp_path / "r"), "--from-dataset"]
     code, out = run_cli(*base, "--period", "march=2026-03-01:2026-03-31")
@@ -97,7 +97,7 @@ def test_cli_from_dataset_uses_the_dataset_date_and_rejects_as_of(tmp_path):
     assert code == 2
 
 
-def test_the_database_route_and_the_dataset_route_agree(world, tmp_path):
+def test_routes_agree(world, tmp_path):
     dataset_path = tmp_path / "ds.json"
     out_dir = str(tmp_path / "r")
     sources = sqlite_args(("auto", world))

@@ -68,7 +68,7 @@ def result(full):
 # ---- cohort and features -------------------------------------------------------------------
 
 
-def test_the_cohort_drops_system_rows_and_immature_slips():
+def test_cohort():
     rows = synthetic_rows(60)
     rows.append(raw(900, agent_login="sys", agent_name="System", due_date="2026-02-01"))
     rows.append(raw(901, due_date="2026-03-30"))  # still inside its grace window
@@ -77,14 +77,14 @@ def test_the_cohort_drops_system_rows_and_immature_slips():
     assert cohort["is_mature"].all() and not cohort["is_system"].any()
 
 
-def test_the_design_matrix_has_exactly_the_documented_features(full):
+def test_design_matrix(full):
     X = M.design_matrix(M.model_cohort(full))
     assert list(X.columns) == list(M.FEATURES)
     assert set(X.columns).isdisjoint(F.LEAKAGE_COLUMNS)
     assert set(X.columns).isdisjoint(F.EXPLANATORY_ONLY_COLUMNS)
 
 
-def test_a_missing_debt_is_flagged_and_a_zero_balance_is_not_the_same_thing():
+def test_missing_debt_flag():
     rows = [raw(1, original_debt=None), raw(2, original_debt=0.0), raw(3, original_debt=250.0)]
     X = M.design_matrix(M.model_cohort(clean_frame(dataset(rows), SETTINGS)))
     assert X["no_debt_link"].tolist() == [1, 0, 0]
@@ -93,14 +93,14 @@ def test_a_missing_debt_is_flagged_and_a_zero_balance_is_not_the_same_thing():
     assert math.isnan(X["log_original_debt"].iloc[0])  # imputed inside the pipeline, per fold
 
 
-def test_a_negative_balance_does_not_poison_the_log():
+def test_negative_balance():
     X = M.design_matrix(
         M.model_cohort(clean_frame(dataset([raw(1, original_debt=-50.0)]), SETTINGS))
     )
     assert X["log_original_debt"].iloc[0] == 0.0
 
 
-def test_check_cohort_refuses_what_it_cannot_validate():
+def test_check_cohort():
     one_class = clean_frame(dataset([raw(i) for i in range(1, 11)]), SETTINGS)
     cohort = M.model_cohort(one_class)
     with pytest.raises(ModelError, match="single outcome class"):
@@ -128,7 +128,7 @@ class Recorder:
         return np.column_stack([np.full(len(X), 0.5), np.full(len(X), 0.5)])
 
 
-def test_cross_validation_never_splits_a_person_across_train_and_test():
+def test_grouped_folds():
     people = np.array([f"p{i // 3}" for i in range(60)])  # 20 people, 3 rows each
     X = pd.DataFrame({"x": range(60)})
     y = np.array([i % 2 for i in range(60)])
@@ -141,7 +141,7 @@ def test_cross_validation_never_splits_a_person_across_train_and_test():
     assert all(s == 0.5 for s in scores)  # a constant score is no better than chance
 
 
-def test_a_fold_with_a_single_outcome_class_yields_nan_not_a_crash():
+def test_single_class_fold():
     people = np.array([f"p{i // 2}" for i in range(20)])
     X = pd.DataFrame({"x": range(20)})
     y = np.array([1, 1] + [0] * 18)  # the only positives belong to one person
@@ -152,7 +152,7 @@ def test_a_fold_with_a_single_outcome_class_yields_nan_not_a_crash():
     assert len(Recorder.seen) == 1  # only the fold with two training classes was fitted
 
 
-def test_auc_summary_ignores_undefined_folds():
+def test_auc_summary():
     assert math.isnan(M.safe_auc(np.array([1, 1, 1]), np.array([0.1, 0.2, 0.3])))
     assert M.summarize([float("nan"), float("nan")])[2] == 0
     assert M.summarize([0.6, float("nan"), 0.8]) == (pytest.approx(0.7), pytest.approx(0.1), 2)
@@ -168,14 +168,14 @@ def test_signal_share():
 # ---- the effect ----------------------------------------------------------------------------
 
 
-def test_the_model_finds_the_planted_term_effect_with_people_grouped(result):
+def test_planted_effect(result):
     logistic, _, valid = M.summarize(result.cv["Logistic (L2)"])
     assert valid == SETTINGS.model.folds
     assert logistic > 0.65
     assert M.summarize(result.term_only)[0] > 0.65
 
 
-def test_odds_ratios_use_the_shortest_observed_band_as_the_reference(result):
+def test_odds_ratio_reference(result):
     assert result.reference == LABELS[0]
     odds = result.term_odds.set_index("band")["odds_ratio"]
     assert LABELS[0] not in odds.index
@@ -184,7 +184,7 @@ def test_odds_ratios_use_the_shortest_observed_band_as_the_reference(result):
     assert (odds > 0).all()
 
 
-def test_the_reference_moves_up_when_the_shortest_band_is_empty():
+def test_empty_reference_band():
     rows = [r for r in synthetic_rows(360) if r["due_date"] != r["agreement_date"]]
     cohort = M.model_cohort(clean_frame(dataset(rows), SETTINGS))
     X = M.design_matrix(cohort)
@@ -194,7 +194,7 @@ def test_the_reference_moves_up_when_the_shortest_band_is_empty():
     assert LABELS[0] not in odds["band"].tolist()
 
 
-def test_controls_include_product_line_against_the_first_line_alphabetically():
+def test_line_control():
     rows = synthetic_rows(360)
     for i, r in enumerate(rows):
         r["product_line"] = "consumer" if i % 2 else "auto"
@@ -208,27 +208,27 @@ def test_controls_include_product_line_against_the_first_line_alphabetically():
     assert "repeat debtor (yes vs no)" in controls
 
 
-def test_the_counterfactual_rewrites_only_the_term(result):
+def test_counterfactual(result):
     table = result.counterfactual.set_index("band")
     assert table["rows"].sum() == result.rows
     assert table.loc[LABELS[-1], "predicted"] > table.loc[LABELS[0], "predicted"]
     assert table.loc[LABELS[0], "delta_pp"] == pytest.approx(0.0)
 
 
-def test_permutation_importance_ranks_the_term_first(result):
+def test_permutation_importance(result):
     importance = result.holdout.importance
     assert importance.iloc[0]["feature"] == "term_band"
     assert set(importance["feature"]) == set(M.FEATURES)
     assert result.holdout.train_rows + result.holdout.test_rows == result.rows
 
 
-def test_a_fixed_seed_gives_the_same_numbers(full, result):
+def test_fixed_seed(full, result):
     again = M.fit_all(full, SETTINGS)
     assert again.cv == result.cv
     assert again.term_only == result.term_only
 
 
-def test_the_holdout_is_skipped_with_a_reason_when_time_cannot_be_split():
+def test_skipped_holdout():
     rows = synthetic_rows(120)
     for r in rows:
         r["agreement_date"] = "2026-01-05"
@@ -239,7 +239,7 @@ def test_the_holdout_is_skipped_with_a_reason_when_time_cannot_be_split():
     assert "Not available" in M.render(outcome, SETTINGS).render()
 
 
-def test_a_cohort_with_no_effect_gets_a_weak_model():
+def test_no_effect_cohort():
     outcome = M.fit_all(
         clean_frame(dataset(synthetic_rows(360, seed=11, effect=0.0)), SETTINGS), SETTINGS
     )
@@ -249,7 +249,7 @@ def test_a_cohort_with_no_effect_gets_a_weak_model():
 # ---- the report ----------------------------------------------------------------------------
 
 
-def test_the_report_states_the_exclusions_and_that_the_result_is_not_causal(result):
+def test_report_wording(result):
     text = M.render(result, SETTINGS).render()
     for column in F.LEAKAGE_COLUMNS:
         assert f"`{column}`" in text
@@ -259,7 +259,7 @@ def test_the_report_states_the_exclusions_and_that_the_result_is_not_causal(resu
     assert f"**{result.reference}** as the reference band" in text
 
 
-def test_the_report_has_the_four_numbered_sections(result):
+def test_report_sections(result):
     text = M.render(result, SETTINGS).render()
     for heading in ("## 1.", "## 2.", "## 3.", "## 4."):
         assert heading in text
@@ -280,7 +280,7 @@ def test_cli_runs_from_a_dataset_file(tmp_path):
     assert (tmp_path / "r" / "model.md").exists()
 
 
-def test_cli_reports_a_cohort_it_cannot_model(tmp_path):
+def test_cli_unmodelable_cohort(tmp_path):
     path = dataset([raw(i) for i in range(1, 9)]).save(tmp_path / "ds.json")
     code, _ = run_cli("model", "--dataset", str(path), "--out-dir", str(tmp_path / "r"))
     assert code == 2

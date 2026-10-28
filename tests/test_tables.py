@@ -21,26 +21,26 @@ from delinquency_eda.tables import (
 SETTINGS = Settings(min_n_reliable=4, min_n_weak=2)
 
 
-def test_reliability_thresholds_are_inclusive():
+def test_reliability_thresholds():
     assert reliability(4, SETTINGS) == RELIABLE
     assert reliability(3, SETTINGS) == WEAK
     assert reliability(2, SETTINGS) == WEAK
     assert reliability(1, SETTINGS) == NOT_RELIABLE
 
 
-def test_unpaid_rate_and_the_empty_frame():
+def test_unpaid_rate():
     buckets = ["overdue_unpaid", "paid_on_time", "paid_on_time", "paid_on_time"]
     frame = pd.DataFrame({"bucket": buckets})
     assert unpaid_rate(frame) == 0.25
     assert np.isnan(unpaid_rate(frame.iloc[0:0]))
 
 
-def test_labels_are_text_and_missing_values_are_named():
+def test_labels():
     labels = label_series(pd.Series([1, None, "x"], dtype=object))
     assert labels.tolist() == ["1", "(unknown)", "x"]
 
 
-def test_sorted_groups_prefers_the_natural_order_then_the_largest():
+def test_sorted_groups():
     fallback = pd.Series({"a": 1.0, "b": 5.0, "c": 3.0, "d": 9.0})
     assert sorted_groups(["a", "b", "c", "d"], ["c", "a"], fallback) == ["c", "a", "d", "b"]
     assert sorted_groups(["a", "b", "c", "d"], None, fallback) == ["d", "b", "c", "a"]
@@ -52,7 +52,7 @@ def _unpaid_frame():
     )
 
 
-def test_concentration_totals_shares_and_order():
+def test_concentration():
     frame = _unpaid_frame()
     labels = pd.Series(["g1", "g1", "g2", "g1"], index=frame.index)
     table = concentration(frame, labels)
@@ -65,13 +65,13 @@ def test_concentration_totals_shares_and_order():
     assert table["share_value"].sum() == 1.0
 
 
-def test_concentration_follows_a_natural_order_when_given():
+def test_concentration_natural_order():
     frame = _unpaid_frame()
     labels = pd.Series(["g1", "g1", "g2", "g1"], index=frame.index)
     assert concentration(frame, labels, order=["g1", "g2"])["group"].tolist() == ["g1", "g2"]
 
 
-def test_concentration_of_nothing_is_an_empty_table():
+def test_empty_concentration():
     frame = _unpaid_frame().iloc[0:0]
     table = concentration(frame, pd.Series([], dtype=object, index=frame.index))
     assert table.empty
@@ -83,7 +83,7 @@ def _mature_frame():
     return pd.DataFrame({"bucket": buckets}, index=[1, 2, 3, 4])
 
 
-def test_discrimination_rate_lift_and_sample_size():
+def test_discrimination():
     mature = _mature_frame()
     labels = pd.Series(["g1", "g1", "g2", "g2"], index=mature.index)
     baseline = unpaid_rate(mature)
@@ -98,7 +98,7 @@ def test_discrimination_rate_lift_and_sample_size():
     assert ordered["group"].tolist() == ["g2", "g1"]
 
 
-def test_lift_is_undefined_when_the_baseline_is_zero_or_missing():
+def test_undefined_lift():
     mature = _mature_frame()
     labels = pd.Series(["g1", "g1", "g2", "g2"], index=mature.index)
     for baseline in (0.0, float("nan")):

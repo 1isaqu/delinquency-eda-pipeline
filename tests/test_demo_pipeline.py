@@ -54,14 +54,14 @@ def report(workspace, name):
     return (workspace["reports"] / name).read_text(encoding="utf-8")
 
 
-def test_the_demo_contract_is_satisfied(workspace):
+def test_demo_contract(workspace):
     code, out = stage(workspace, "schema")
     assert code == 0
     assert "auto: ready for period/card = True, ready for base = True" in out
     assert "consumer: ready" in out
 
 
-def test_the_base_build_spans_both_product_lines_and_resolves_every_rule(workspace):
+def test_base_build(workspace):
     dataset = Dataset.load(workspace["dataset"])
     frame = dataset.base_frame()
     assert {"auto", "consumer"} == set(frame["product_line"])
@@ -75,7 +75,7 @@ def test_the_base_build_spans_both_product_lines_and_resolves_every_rule(workspa
     assert dataset.debtors and dataset.contacts and dataset.breaks
 
 
-def test_period_picks_the_window_the_reference_counts_came_from(workspace):
+def test_period(workspace):
     ds = Dataset.load(workspace["dataset"])
     frame = ds.base_frame()
     march = frame[(frame["due_date"] >= "2026-03-01") & (frame["due_date"] <= "2026-03-31")]
@@ -88,7 +88,7 @@ def test_period_picks_the_window_the_reference_counts_came_from(workspace):
     assert "closest window: month to date (distance 0)" in out
 
 
-def test_censoring_finds_slips_that_are_not_lost_yet(workspace):
+def test_censoring(workspace):
     code, out = stage(workspace, "censoring")
     assert code == 0
     still_open = int(out.split("still_open=")[1].split()[0])
@@ -96,7 +96,7 @@ def test_censoring_finds_slips_that_are_not_lost_yet(workspace):
     assert "definitive (grace period over)" in report(workspace, "censoring.md")
 
 
-def test_the_card_inflates_only_the_open_month(workspace):
+def test_card(workspace):
     code, out = stage(workspace, "card", "--as-of", "2026-03-31")
     assert code == 0
     lines = {line.split("  ")[0].strip(): line for line in out.splitlines() if "generated=" in line}
@@ -108,13 +108,13 @@ def test_the_card_inflates_only_the_open_month(workspace):
     assert closed.split("as_counted=")[1].split()[0] == closed.split("lost=")[1].split()[0]
 
 
-def test_drift_finds_slips_that_changed_bucket_since_a_few_days_ago(workspace):
+def test_drift(workspace):
     code, out = stage(workspace, "drift", "--reference-date", "2026-03-27")
     assert code == 0 and "entered:" in out
     assert "Transitions" in report(workspace, "drift.md")
 
 
-def test_analysis_puts_the_pseudo_agent_at_the_top_of_the_unpaid_rate(workspace):
+def test_analysis(workspace):
     ds = Dataset.load(workspace["dataset"])
     from delinquency_eda import features
 
@@ -129,7 +129,7 @@ def test_analysis_puts_the_pseudo_agent_at_the_top_of_the_unpaid_rate(workspace)
     assert code == 0
 
 
-def test_eda_and_diagnostics_report_what_the_generator_planted(workspace):
+def test_eda_and_diagnose(workspace):
     for name in ("eda", "diagnose"):
         code, _ = stage(workspace, name)
         assert code == 0
@@ -139,7 +139,7 @@ def test_eda_and_diagnostics_report_what_the_generator_planted(workspace):
     assert "Nothing was changed" in diagnose
 
 
-def test_cleaning_flags_the_pseudo_agent_and_removes_nothing(workspace):
+def test_cleaning(workspace):
     code, out = stage(workspace, "clean")
     assert code == 0
     full = pd.read_csv(workspace["reports"] / "clean_full.csv", dtype={"person_key": str})
@@ -154,7 +154,7 @@ def test_cleaning_flags_the_pseudo_agent_and_removes_nothing(workspace):
     assert "analytic=" in out
 
 
-def test_the_term_model_recovers_the_planted_effect(workspace):
+def test_term_model(workspace):
     code, out = stage(workspace, "model")
     assert code == 0 and "Logistic (L2): AUC" in out
     text = report(workspace, "model.md")
@@ -167,7 +167,7 @@ def test_the_term_model_recovers_the_planted_effect(workspace):
     assert ratios[-1] > 2.0  # the longest term is far likelier to go unpaid than the shortest
 
 
-def test_the_whole_pipeline_is_reproducible(workspace, tmp_path):
+def test_reproducible(workspace, tmp_path):
     again = [*workspace["common"]]
     again[again.index("--dataset") + 1] = str(tmp_path / "again.json")
     code, _ = run_cli(*again, *BASE)

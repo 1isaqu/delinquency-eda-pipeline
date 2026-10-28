@@ -45,14 +45,14 @@ def full():
     return clean_frame(dataset(_rows()), SETTINGS)
 
 
-def test_the_cleaning_adds_columns_and_removes_nothing(full):
+def test_additive_cleaning(full):
     assert len(full) == 7
     assert set(BASE_COLUMNS) <= set(full.columns)
     for added in ("agreement_key", "is_system", "zero_balance", "group_key", "is_mature"):
         assert added in full.columns
 
 
-def test_a_zero_balance_is_flagged_but_never_imputed(full):
+def test_zero_balance_flag(full):
     by_id = full.set_index("agreement_id")
     assert bool(by_id.loc[2, "zero_balance"]) and not bool(by_id.loc[3, "zero_balance"])
     assert by_id.loc[2, "original_debt"] == 0.0
@@ -61,37 +61,37 @@ def test_a_zero_balance_is_flagged_but_never_imputed(full):
     assert pd.isna(by_id.loc[3, "first_installment_ratio"])
 
 
-def test_system_agents_match_on_name_or_login_ignoring_case_and_accents(full):
+def test_system_agent_match(full):
     flagged = full.set_index("agreement_id")["is_system"]
     assert flagged[[4, 5]].all()
     assert not flagged[[1, 2, 3, 6, 7]].any()
 
 
-def test_without_listed_agents_nothing_is_flagged():
+def test_no_listed_agents():
     frame = clean_frame(dataset(_rows()), Settings())
     assert not frame["is_system"].any()
 
 
-def test_the_analytic_view_only_drops_flagged_rows(full):
+def test_analytic_view(full):
     view = analytic_view(full)
     assert len(view) == 5
     assert not view["is_system"].any()
     assert len(full) == 7  # the full table is untouched
 
 
-def test_the_agreement_key_includes_the_product_line():
+def test_agreement_key():
     ds = dataset([raw(1), raw(1, product_line="consumer")], lines=("auto", "consumer"))
     frame = clean_frame(ds, Settings())
     assert frame["agreement_key"].tolist() == ["auto|1|1", "consumer|1|1"]
     assert agreement_key(frame).is_unique
 
 
-def test_a_repeated_agreement_key_is_a_grain_violation():
+def test_repeated_key():
     with pytest.raises(DatasetError, match="grain violated"):
         clean_frame(dataset([raw(1), raw(1, record_id=99)]), Settings())
 
 
-def test_slips_without_a_person_key_do_not_pool_into_one_split_group(full):
+def test_keyless_slips(full):
     groups = full.set_index("agreement_id")["group_key"]
     assert groups[6] != groups[7]
     assert groups[6] == "auto|debtor|60"
@@ -99,12 +99,12 @@ def test_slips_without_a_person_key_do_not_pool_into_one_split_group(full):
     assert split_group(full).equals(full["group_key"])
 
 
-def test_system_flag_with_no_match_is_all_false():
+def test_system_flag_no_match():
     frame = dataset([raw(1)]).base_frame()
     assert not system_flag(frame, ("someone_else",)).any()
 
 
-def test_the_summary_reports_what_was_and_was_not_changed(full):
+def test_summary(full):
     ds = dataset(_rows())
     s = summarize(ds, full)
     assert (s.rows_before, s.rows_after_full) == (7, 7)
@@ -118,7 +118,7 @@ def test_the_summary_reports_what_was_and_was_not_changed(full):
     assert "| columns removed | 0 |" in text
 
 
-def test_the_meta_file_names_the_leakage_and_the_split_unit():
+def test_meta_file():
     ds = dataset([raw(1)])
     meta = meta_for(ds, SETTINGS)
     assert meta["leakage_columns"] == list(F.LEAKAGE_COLUMNS)
@@ -127,7 +127,7 @@ def test_the_meta_file_names_the_leakage_and_the_split_unit():
     assert meta["grace_days"] == 3
 
 
-def test_cli_writes_two_tables_and_a_meta_file_and_keeps_keys_as_text(tmp_path):
+def test_cli_outputs(tmp_path):
     rows = [raw(1, person_key="007"), raw(2, person_key="0042", agent_login="batch_loader")]
     path = dataset(rows).save(tmp_path / "ds.json")
     config = tmp_path / "settings.json"

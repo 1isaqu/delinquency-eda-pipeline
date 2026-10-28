@@ -13,14 +13,14 @@ PAGE = (ROOT / "docs" / "data-sources.md").read_text(encoding="utf-8")
 FLAT = " ".join(PAGE.split())  # sentences wrap across lines
 
 
-def test_the_page_names_the_three_tiers_and_links_the_contract():
+def test_tiers_and_links():
     for heading in ("## Tier 0", "## Tier 1", "## Tier 2"):
         assert heading in PAGE, heading
     assert "(data-contract.md)" in PAGE
     assert "No fixture file holds data" in FLAT
 
 
-def test_every_product_line_constant_is_listed():
+def test_line_constants():
     for spec in generator.LINES:
         assert f"`{spec.name}`: {spec.slips} slips" in PAGE, spec.name
         assert f"ticket scale {spec.ticket_scale}" in PAGE, spec.name
@@ -28,17 +28,17 @@ def test_every_product_line_constant_is_listed():
         assert f"status ids from {spec.status_base + 1}" in PAGE, spec.name
 
 
-def test_the_world_constants_are_listed():
+def test_world_constants():
     assert f"grace period `{generator.GRACE}` days" in PAGE
     assert "seed `7`" in PAGE and "reference date `2026-03-31`" in PAGE
 
 
-def test_the_outreach_result_weights_are_listed():
+def test_outreach_weights():
     listed = ", ".join(f"{w:.2f}" for w in generator.RESULT_WEIGHTS)
     assert listed in PAGE
 
 
-def test_the_payment_model_coefficients_are_listed():
+def test_payment_coefficients():
     source = inspect.getsource(generator.LineBuilder._outcome)
     line = next(x for x in source.splitlines() if x.strip().startswith("logit ="))
     coefficients = re.findall(r"\d+\.\d+", line)
@@ -47,6 +47,6 @@ def test_the_payment_model_coefficients_are_listed():
         assert number in PAGE, number
 
 
-def test_the_page_claims_nothing_was_fitted_to_real_data():
+def test_no_fitting_claim():
     assert "None comes from a public source" in FLAT
     assert "fitted to, tuned against or checked against any real dataset" in FLAT

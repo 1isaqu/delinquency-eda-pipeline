@@ -65,7 +65,7 @@ CATALOG = (
 # ---- SQL Server ----------------------------------------------------------------------------
 
 
-def test_settings_from_env_use_defaults_and_overrides():
+def test_env_settings():
     s = SQLServerSettings.from_env({})
     assert (s.host, s.port, s.user, s.trust_server_cert) == ("localhost", None, "", False)
     s = SQLServerSettings.from_env(
@@ -84,13 +84,13 @@ def test_settings_from_env_use_defaults_and_overrides():
     assert s.trust_server_cert is True
 
 
-def test_settings_reject_a_bad_port_and_hide_the_password():
+def test_settings_errors():
     with pytest.raises(AdapterError, match="DEA_DB_PORT"):
         SQLServerSettings.from_env({"DEA_DB_PORT": "abc"})
     assert "change-me" not in repr(SQLServerSettings(password="change-me"))
 
 
-def test_connection_string_uses_sql_login_or_integrated_security():
+def test_connection_string():
     with_login = SQLServerSettings(host="h", port=1433, user="u", password="p;w", driver="D")
     text = with_login.connection_string("collections")
     assert text.startswith("DRIVER={D};SERVER=h,1433;DATABASE=collections;UID=u;PWD={p;w}")
@@ -98,7 +98,7 @@ def test_connection_string_uses_sql_login_or_integrated_security():
     assert "Trusted_Connection=yes" in SQLServerSettings().connection_string("x")
 
 
-def test_connect_uses_the_injected_connector_and_returns_a_dialect_aware_database():
+def test_connect():
     seen = {}
 
     def connector(connection_string, settings):
@@ -113,7 +113,7 @@ def test_connect_uses_the_injected_connector_and_returns_a_dialect_aware_databas
     assert db.query("SELECT 1 AS a") == [{"a": 1}]
 
 
-def test_connect_errors_never_echo_the_password():
+def test_password_not_echoed():
     def connector(connection_string, settings):
         raise RuntimeError(f"login failed for {settings.password}")
 
@@ -123,7 +123,7 @@ def test_connect_errors_never_echo_the_password():
     assert "change-me" not in str(info.value) and "***" in str(info.value)
 
 
-def test_missing_pyodbc_is_reported_as_unavailable(monkeypatch):
+def test_missing_pyodbc(monkeypatch):
     import builtins
 
     real_import = builtins.__import__
@@ -138,7 +138,7 @@ def test_missing_pyodbc_is_reported_as_unavailable(monkeypatch):
         SQLServerDatabase.connect("x", SQLServerSettings())
 
 
-def test_query_binds_parameters_and_refuses_writes():
+def test_query_binding():
     conn = FakeConnection(lambda sql: (["n"], [(7,)]))
     db = SQLServerDatabase(conn, SQLServerDialect())
     assert db.query("SELECT ? AS n", [7]) == [{"n": 7}]
@@ -148,7 +148,7 @@ def test_query_binds_parameters_and_refuses_writes():
     assert len(conn.log) == 1  # the write never reached the driver
 
 
-def test_driver_errors_are_wrapped_and_statements_without_results_are_errors():
+def test_driver_errors():
     def boom(sql):
         raise RuntimeError("deadlock")
 
@@ -159,7 +159,7 @@ def test_driver_errors_are_wrapped_and_statements_without_results_are_errors():
         SQLServerDatabase(empty, SQLServerDialect()).query("SELECT 1")
 
 
-def test_table_columns_reads_information_schema_with_the_schema_filter():
+def test_table_columns():
     conn = FakeConnection(lambda sql: CATALOG)
     db = SQLServerDatabase(conn, SQLServerDialect(), schema="dbo")
     cols = db.table_columns("agents")
@@ -189,14 +189,14 @@ def test_format_type():
 # ---- SQLite --------------------------------------------------------------------------------
 
 
-def test_sqlite_columns_and_missing_table(tmp_path):
+def test_sqlite_columns(tmp_path):
     db = SQLiteDatabase.open(make_world(tmp_path / "w.db"))
     names = [c.name for c in db.table_columns("agents")]
     assert names == ["agent_id", "display_name", "login"]
     assert db.table_columns("no_such_table") == []
 
 
-def test_sqlite_connection_is_genuinely_read_only(tmp_path):
+def test_sqlite_read_only(tmp_path):
     db = SQLiteDatabase.open(make_world(tmp_path / "w.db"))
     with pytest.raises(sqlite3.OperationalError, match="readonly"):
         db._connection.execute("DELETE FROM agents")  # bypasses the SQL guard on purpose
@@ -218,12 +218,12 @@ def test_parse_sources():
 
 
 @pytest.mark.parametrize("bad", ["auto", "=x", "auto=", "1bad=x", "has space=x"])
-def test_parse_sources_rejects_malformed_entries(bad):
+def test_malformed_sources(bad):
     with pytest.raises(ConfigError):
         parse_sources([bad])
 
 
-def test_duplicate_product_lines_are_rejected():
+def test_duplicate_lines():
     with pytest.raises(ConfigError, match="twice"):
         parse_sources(["a=1", "a=2"])
 
@@ -245,7 +245,7 @@ def test_open_source_dispatch(tmp_path):
     assert open_source(Source("a", "b"), "sqlite", {}, connector=lambda s, b: sentinel) is sentinel
 
 
-def test_load_env_file_reports_names_not_values(tmp_path):
+def test_env_file_names_only(tmp_path):
     env_file = tmp_path / ".env"
     env_file.write_text("# c\nA=1\nB = 'two'\nbadline\nA=ignored\n", encoding="utf-8")
     environ = {"B": "kept"}

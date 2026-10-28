@@ -26,7 +26,7 @@ def checks_by_name(df):
     return {c.name: c for c in E.quality_checks(df)}
 
 
-def test_quality_checks_count_each_condition_once_on_rows_built_to_trigger_it():
+def test_quality_checks():
     rows = [
         raw(1, original_debt=0.0),
         raw(2, original_debt=None, portfolio_label=None, person_key=None),
@@ -55,13 +55,13 @@ def test_quality_checks_count_each_condition_once_on_rows_built_to_trigger_it():
     assert c["duplicate (product_line, record_id)"].rows == 0
 
 
-def test_a_clean_frame_triggers_no_high_severity_check():
+def test_clean_frame():
     rows = [raw(1), paid_on_time(2), raw(3, due_date="2026-03-20")]
     flagged = [c for c in E.quality_checks(frame(rows)) if c.severity == E.HIGH and c.rows]
     assert flagged == []
 
 
-def test_record_ids_repeating_across_product_lines_are_informational():
+def test_repeated_record_ids():
     rows = [raw(1), raw(1, product_line="consumer")]
     c = checks_by_name(frame(rows, lines=("auto", "consumer")))
     shared = c["record_id shared by two product lines"]
@@ -69,13 +69,13 @@ def test_record_ids_repeating_across_product_lines_are_informational():
     assert c["duplicate (product_line, record_id)"].rows == 0
 
 
-def test_profile_has_no_example_values():
+def test_profile():
     prof = E.profile(frame([raw(1, person_key="never_print_me")]).iloc[:, :24])
     assert set(prof.columns) == {"column", "dtype", "nulls", "% null", "distinct"}
     assert "never_print_me" not in prof.to_string()
 
 
-def test_nullness_classifies_the_outcome_when_money_only_exists_if_paid():
+def test_nullness():
     mature = frame([raw(1), raw(2), paid_on_time(3), paid_on_time(4)])
     assert E.nullness_accuracy(mature) == 1.0
     assert np.isnan(E.nullness_accuracy(mature.iloc[0:0]))
@@ -90,7 +90,7 @@ def test_orphans_and_rare_categories():
     assert (total, small) == (3, 2) and share == pytest.approx(2 / 7)
 
 
-def test_monthly_table_counts_mature_and_unpaid_per_due_month():
+def test_monthly_table():
     feb = {"due_date": "2026-02-10", "agreement_date": "2026-02-01"}
     jan = {"due_date": "2026-01-10", "agreement_date": "2026-01-01"}
     paid = {"paid_amount": 100.0, "paid_date": "2026-01-11"}
@@ -101,13 +101,13 @@ def test_monthly_table_counts_mature_and_unpaid_per_due_month():
     assert months.loc["2026-01", "unpaid"] == 0 and months.loc["2026-01", "rate"] == 0.0
 
 
-def test_stability_range_ignores_months_without_enough_mature_slips():
+def test_stability_range():
     two = pd.DataFrame({"mature": [10, 10, 1], "rate": [0.2, 0.5, 0.9]})
     assert E.stability_range(two, 5) == pytest.approx(30.0)  # the 1-slip month is ignored
     assert E.stability_range(two.iloc[:1], 5) is None
 
 
-def test_correlation_marks_leaking_columns_and_finds_the_term():
+def test_correlation():
     rows = []
     for i in range(1, 41):
         term = i % 10
@@ -120,7 +120,7 @@ def test_correlation_marks_leaking_columns_and_finds_the_term():
     assert not bool(table.loc["days_to_due", "leaks"])
 
 
-def test_collinear_pairs_exclude_leakage_columns():
+def test_collinear_pairs():
     rows = [
         raw(i, first_installment_value=float(i), total_value=float(2 * i)) for i in range(1, 12)
     ]
@@ -131,7 +131,7 @@ def test_collinear_pairs_exclude_leakage_columns():
     assert "paid_amount" not in set(pairs["column a"]) | set(pairs["column b"])
 
 
-def test_the_assembled_report_has_ordered_sections_and_no_identifiers():
+def test_assembled_report():
     rows = [raw(i, person_key=f"pk_secret_{i}", agent_id=f"ag_secret_{i}") for i in range(1, 6)]
     rows.append(paid_on_time(6))
     ds = dataset(rows)
@@ -144,7 +144,7 @@ def test_the_assembled_report_has_ordered_sections_and_no_identifiers():
     assert "6.2 Target leakage" in text
 
 
-def test_a_recommendation_only_appears_when_its_trigger_fired():
+def test_recommendation_trigger():
     no_zero = frame([raw(1), paid_on_time(2)])
     ds = dataset([raw(1), paid_on_time(2)])
     text = E.render(ds, no_zero, SETTINGS).render()
@@ -159,7 +159,7 @@ def fired(rows, **kwargs):
     return {what for what, _ in E.recommendations(df, E.quality_checks(df), SETTINGS)}
 
 
-def test_the_term_recommendation_needs_a_long_right_tail():
+def test_term_recommendation():
     flat = [raw(i) for i in range(1, 9)]  # every slip has the same term
     assert "term (days to first due date) with a long right tail" not in fired(flat)
     short = [raw(i, due_date="2026-03-04") for i in range(1, 21)]
@@ -167,7 +167,7 @@ def test_the_term_recommendation_needs_a_long_right_tail():
     assert "term (days to first due date) with a long right tail" in fired(short + long_)
 
 
-def test_the_rare_category_recommendation_looks_at_agents_and_portfolios():
+def test_rare_recommendation():
     common = [raw(i) for i in range(1, 7)]  # one agent and one label, six slips each
     assert "rare agents and portfolios" not in fired(common)
     assert "rare agents and portfolios" in fired([*common, raw(7, agent_id="a2")])
@@ -175,27 +175,27 @@ def test_the_rare_category_recommendation_looks_at_agents_and_portfolios():
     assert "rare agents and portfolios" in fired([*common, odd_label])
 
 
-def test_the_product_line_recommendation_needs_a_second_line():
+def test_line_recommendation():
     assert "more than one product line" not in fired([raw(i) for i in range(1, 5)])
     two = [raw(1), raw(2, product_line="consumer")]
     assert "more than one product line" in fired(two, lines=("auto", "consumer"))
 
 
-def test_the_categorical_summary_gives_shares_and_no_values():
+def test_categorical_summary():
     summary = E.categorical_summary(frame([raw(1), raw(2, agent_id="a2"), raw(3)]))
     assert list(summary.columns) == ["column", "distinct", "% in most frequent value"]
     agent = summary.set_index("column").loc["agent_id"]
     assert agent["distinct"] == 2 and agent["% in most frequent value"] == pytest.approx(200 / 3)
 
 
-def test_the_person_recommendation_needs_a_person_with_two_slips():
+def test_person_recommendation():
     alone = [raw(i) for i in range(1, 5)]
     assert "people with more than one slip" not in fired(alone)
     shared = [raw(1, person_key="pk_x"), raw(2, person_key="pk_x"), raw(3), raw(4)]
     assert "people with more than one slip" in fired(shared)
 
 
-def test_the_report_says_so_when_nothing_fired_and_keeps_the_fixed_advice():
+def test_nothing_fired():
     rows = [raw(i) for i in range(1, 5)]
     assert fired(rows) == set()
     ds = dataset(rows)
