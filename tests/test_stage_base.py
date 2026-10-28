@@ -15,7 +15,7 @@ from world import damage
 BUILD = ["base", "--from", "2026-03-01", "--to", "2026-03-31", "--as-of", "2026-03-31"]
 
 
-def test_summary_counts_slips_people_and_buckets():
+def test_summary():
     ds = dataset(
         [paid_on_time(1), raw(2), raw(3, person_key=None), raw(4, due_date="2026-04-20")],
     )
@@ -27,14 +27,14 @@ def test_summary_counts_slips_people_and_buckets():
     assert s.first_installment_value == 400.0
 
 
-def test_the_report_warns_about_keeping_the_dataset_out_of_version_control():
+def test_report_warning():
     ds = dataset([raw(1)])
     text = render(ds, summarize(ds)).render()
     assert "version control" in text
     assert "2026-03-31" in text
 
 
-def test_cli_extracts_the_world_and_saves_a_loadable_dataset(world, tmp_path):
+def test_cli_extracts(world, tmp_path):
     target = tmp_path / "data" / "dataset.json"
     code, out = run_cli(
         *sqlite_args(("auto", world)),
@@ -50,7 +50,7 @@ def test_cli_extracts_the_world_and_saves_a_loadable_dataset(world, tmp_path):
     assert (tmp_path / "r" / "base.md").exists()
 
 
-def test_the_same_command_and_date_give_a_byte_identical_dataset(world, tmp_path):
+def test_byte_identical(world, tmp_path):
     first, second = tmp_path / "one.json", tmp_path / "two.json"
     for target in (first, second):
         code, _ = run_cli(
@@ -61,7 +61,7 @@ def test_the_same_command_and_date_give_a_byte_identical_dataset(world, tmp_path
     assert first.read_bytes() == second.read_bytes()
 
 
-def test_a_later_reference_date_changes_outcomes_not_membership(world, tmp_path):
+def test_reference_date(world, tmp_path):
     early, late = tmp_path / "early.json", tmp_path / "late.json"
     for target, as_of in ((early, "2026-03-11"), (late, "2026-03-31")):
         args = ["base", "--from", "2026-03-01", "--to", "2026-03-31", "--as-of", as_of]
@@ -75,7 +75,7 @@ def test_a_later_reference_date_changes_outcomes_not_membership(world, tmp_path)
     assert [r["bucket"] for r in a.base] != [r["bucket"] for r in b.base]
 
 
-def test_a_reversed_period_is_reported_not_raised(world, tmp_path):
+def test_reversed_period(world, tmp_path):
     code, _ = run_cli(
         *sqlite_args(("auto", world)),
         "--dataset", str(tmp_path / "d.json"),

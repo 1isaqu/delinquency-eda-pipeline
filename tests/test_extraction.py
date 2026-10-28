@@ -71,19 +71,19 @@ def reconcile_queries(dialect):
     ]
 
 
-def test_every_table_reference_carries_nolock_on_sql_server():
+def test_nolock_on_sql_server():
     for query in all_queries(SQLServerDialect()):
         assert TABLE_REF.search(query.sql), "the checker found no table reference at all"
         assert unhinted_tables(query.sql) == []
 
 
-def test_sqlite_sql_has_no_sql_server_hints():
+def test_no_hints_on_sqlite():
     for query in all_queries(SQLiteDialect()):
         assert "NOLOCK" not in query.sql
         assert "OUTER APPLY" not in query.sql
 
 
-def test_sql_server_resolves_the_portfolio_with_a_single_top_one_lookup():
+def test_top_one_lookup():
     sql = build_slip_query(SQLServerDialect(), SETTINGS, START, END, detail=True).sql
     assert "OUTER APPLY" in sql
     assert "SELECT TOP 1 da.portfolio_label" in sql
@@ -91,14 +91,14 @@ def test_sql_server_resolves_the_portfolio_with_a_single_top_one_lookup():
     assert "portfolio_label IS NOT NULL" in sql
 
 
-def test_lean_query_skips_the_detail_joins():
+def test_lean_query():
     sql = build_slip_query(SQLServerDialect(), SETTINGS, START, END, detail=False).sql
     for name in ("debtors", "debt_attributes", "debts", "debt_totals"):
         assert name not in sql
     assert "totals" in sql  # totals are cheap and the card needs them
 
 
-def test_filters_sit_inside_the_ranked_table_before_the_row_number():
+def test_filters_before_ranking():
     sql = build_slip_query(SQLServerDialect(), SETTINGS, START, END, detail=False).sql
     ranked = sql.split("selected AS")[0]
     assert "ROW_NUMBER()" in ranked
@@ -107,7 +107,7 @@ def test_filters_sit_inside_the_ranked_table_before_the_row_number():
     assert "WHERE rn = 1" in sql
 
 
-def test_parameter_order_and_binding_per_dialect():
+def test_parameter_binding():
     settings = Settings(
         generated_status_labels=("ACTIVE", "PAID"), excluded_agent_patterns=("Sys%",)
     )
@@ -118,14 +118,14 @@ def test_parameter_order_and_binding_per_dialect():
     assert server.sql.count("?") == len(server.params)
 
 
-def test_no_excluded_patterns_means_no_agent_clause():
+def test_no_agent_clause():
     settings = Settings(excluded_agent_patterns=())
     query = build_slip_query(SQLiteDialect(), settings, START, END, detail=False)
     assert "NOT LIKE" not in query.sql
     assert query.sql.count("?") == len(query.params)
 
 
-def test_in_lists_have_one_marker_per_value():
+def test_in_list_markers():
     q = build_contacts_query(SQLiteDialect(), [5, 6, 7], START, END)
     assert q.sql.count("?") == len(q.params) == 5
     q = build_breaks_query(SQLiteDialect(), SETTINGS, [5, 6, 7])
@@ -200,13 +200,13 @@ def slips(world, **kwargs):
         }  # fmt: skip
 
 
-def test_only_in_scope_first_installments_are_extracted(world):
+def test_scope(world):
     rows = slips(world)
     # 105 excluded agent, 106 wrong status, 107 outside the window, 104 due after the window.
     assert sorted(rows) == [101, 102, 103, 108, 109]
 
 
-def test_outcomes_follow_the_reference_date_and_grace_period(world):
+def test_outcomes(world):
     rows = slips(world)
     assert rows[101]["bucket"] == derive.PAID_ON_TIME
     assert rows[102]["bucket"] == derive.OVERDUE_UNPAID
@@ -216,39 +216,39 @@ def test_outcomes_follow_the_reference_date_and_grace_period(world):
     assert rows[102]["days_to_due"] == 8
 
 
-def test_a_later_due_date_brings_in_an_unmatured_slip(world):
+def test_unmatured_slip(world):
     rows = slips(world, end=date(2026, 4, 30))
     assert rows[104]["bucket"] == derive.TO_MATURE
     assert rows[104]["days_overdue"] < 0
 
 
-def test_rewritten_first_installment_keeps_the_latest_row(world):
+def test_rewritten_installment(world):
     row = slips(world)[108]
     assert row["record_id"] == 9
     assert row["first_installment_value"] == 175.0
     assert row["status_label"] == "BROKEN"
 
 
-def test_filters_run_before_ranking_so_a_valid_earlier_row_survives(world):
+def test_filter_then_rank(world):
     row = slips(world)[109]
     assert row["record_id"] == 10
     assert row["first_installment_value"] == 80.0
     assert row["status_label"] == "ACTIVE"
 
 
-def test_totals_count_each_installment_once_using_its_latest_row(world):
+def test_agreement_totals(world):
     row = slips(world)[102]
     assert row["total_installments"] == 3
     assert row["total_value"] == 200.0 + 200.0 + 250.0
     assert slips(world)[101]["total_installments"] == 1
 
 
-def test_declared_plan_is_kept_apart_from_generated_installments(world):
+def test_declared_plan(world):
     assert slips(world)[101]["plan_installments"] == 3
     assert slips(world)[101]["total_installments"] == 1
 
 
-def test_portfolio_label_is_the_lowest_debt_id_with_a_label(world):
+def test_portfolio_label(world):
     rows = slips(world)
     # debt 2 wins, though debt 3 was linked first
     assert rows[102]["portfolio_label"] == "Portfolio A-02"
@@ -257,19 +257,19 @@ def test_portfolio_label_is_the_lowest_debt_id_with_a_label(world):
     assert rows[101]["portfolio_label"] == "Portfolio A-01"
 
 
-def test_original_debt_distinguishes_no_link_from_zero_balance(world):
+def test_original_debt(world):
     rows = slips(world)
     assert rows[102]["original_debt"] == 100.0  # 0.0 + 100.0
     assert rows[109]["original_debt"] is None
     assert rows[101]["original_debt"] == 500.0
 
 
-def test_statuses_are_resolved_by_label_not_by_id(tmp_path):
+def test_status_by_label(tmp_path):
     shifted = make_world(tmp_path / "shifted.db", status_base=70)
     assert sorted(slips(shifted)) == [101, 102, 103, 108, 109]
 
 
-def test_agent_fields_and_person_key_are_carried(world):
+def test_agent_and_person_key(world):
     row = slips(world)[101]
     assert (row["agent_name"], row["agent_login"], row["person_key"]) == (
         "Agent 01",
@@ -278,21 +278,21 @@ def test_agent_fields_and_person_key_are_carried(world):
     )
 
 
-def test_an_agreement_whose_agent_is_missing_from_agents_is_kept(tmp_path):
+def test_unknown_agent_kept(tmp_path):
     orphan = (1, 5, 1, 1, 0, 100.0, 1, None, "2026-03-01", "2026-03-10", None, "ACTIVE", "ghost")
     row = slips(make_world(tmp_path / "ghost.db", rows=[orphan]))[5]
     assert row["agent_id"] == "ghost"
     assert row["agent_name"] is None and row["agent_login"] is None
 
 
-def test_lean_rows_have_no_detail_columns(world):
+def test_lean_rows(world):
     with SQLiteDatabase.open(world) as db:
         rows = fetch_slips(db, "auto", SETTINGS, START, END, as_of=AS_OF, detail=False)
     assert rows and all(r["person_key"] is None and r["portfolio_label"] is None for r in rows)
     assert {r["agreement_id"]: r["total_value"] for r in rows}[102] == 650.0
 
 
-def test_the_database_is_opened_read_only(world):
+def test_read_only_open(world):
     with SQLiteDatabase.open(world) as db, pytest.raises(ReadOnlyViolation):
         db.query("DELETE FROM agents")
 
@@ -300,7 +300,7 @@ def test_the_database_is_opened_read_only(world):
 # ---- the assembled dataset -----------------------------------------------------------------
 
 
-def test_dataset_links_debtors_contacts_and_breaks_across_product_lines(two_lines):
+def test_dataset_links(two_lines):
     ds = build_dataset(two_lines, SETTINGS, date_from=START, date_to=END, as_of=AS_OF)
     assert ds.meta.product_lines == ["auto", "consumer"]
     assert len(ds.base) == 6
@@ -314,7 +314,7 @@ def test_dataset_links_debtors_contacts_and_breaks_across_product_lines(two_line
     }  # fmt: skip
 
 
-def test_dataset_round_trips_through_json(two_lines, tmp_path):
+def test_dataset_round_trip(two_lines, tmp_path):
     verdict = admit(
         two_lines,
         SETTINGS,
@@ -331,7 +331,7 @@ def test_dataset_round_trips_through_json(two_lines, tmp_path):
     assert again.base == ds.base and again.contacts == ds.contacts and again.breaks == ds.breaks
 
 
-def test_empty_period_gives_an_empty_but_valid_dataset(two_lines):
+def test_empty_period(two_lines):
     ds = build_dataset(
         two_lines, SETTINGS, date_from=date(2020, 1, 1), date_to=date(2020, 1, 31), as_of=AS_OF
     )
@@ -339,12 +339,12 @@ def test_empty_period_gives_an_empty_but_valid_dataset(two_lines):
     assert list(ds.base_frame().columns)[:2] == ["product_line", "record_id"]
 
 
-def test_reversed_period_is_an_error(two_lines):
+def test_reversed_period(two_lines):
     with pytest.raises(DatasetError, match="before its start"):
         build_dataset(two_lines, SETTINGS, date_from=END, date_to=START, as_of=AS_OF)
 
 
-def test_loading_a_bad_file_is_a_clear_error(tmp_path):
+def test_bad_file(tmp_path):
     with pytest.raises(DatasetError, match="cannot read"):
         Dataset.load(tmp_path / "missing.json")
     bad = tmp_path / "bad.json"
@@ -362,7 +362,7 @@ def test_loading_a_bad_file_is_a_clear_error(tmp_path):
         Dataset.load(bad)
 
 
-def test_ids_chunking_still_finds_everything(two_lines):
+def test_id_chunking(two_lines):
     small = Settings(grace_days=3, id_chunk_size=1)
     big = build_dataset(two_lines, SETTINGS, date_from=START, date_to=END, as_of=AS_OF)
     tiny = build_dataset(two_lines, small, date_from=START, date_to=END, as_of=AS_OF)
@@ -382,7 +382,7 @@ def enriched(two_lines):
     return frame.set_index(["product_line", "agreement_id"])
 
 
-def test_follow_up_counts_pool_every_debtor_row_of_the_same_person(enriched):
+def test_follow_up_pooling(enriched):
     r = enriched.loc[("auto", 103)]
     # debtor 3 itself has no events; its person's other debtor rows (auto 1, auto 5, consumer 1)
     # do, and the 04-20 event is outside the window.
@@ -390,7 +390,7 @@ def test_follow_up_counts_pool_every_debtor_row_of_the_same_person(enriched):
     assert r.followup_level == FOLLOWUP_CPC
 
 
-def test_contact_on_the_agreement_day_is_not_follow_up(enriched):
+def test_agreement_day_contact(enriched):
     r = enriched.loc[("auto", 102)]
     assert (r.contacts_total, r.contacts_after) == (3, 2)
     assert (r.answered_after, r.cpc_after) == (1, 1)
@@ -402,20 +402,20 @@ def test_attempts_only_level(enriched):
     assert r.followup_level == FOLLOWUP_ATTEMPTS
 
 
-def test_prior_breaks_pool_the_person_and_exclude_the_agreement_itself(enriched):
+def test_prior_breaks(enriched):
     assert enriched.loc[("auto", 103)].prior_breaks == 2
     assert enriched.loc[("auto", 103)].prior_manual_breaks == 1  # one BROKEN, one AUTO_BROKEN
     assert enriched.loc[("consumer", 101)].prior_breaks == 2  # history is found across lines
 
 
-def test_the_manual_break_label_is_the_one_the_dataset_was_built_with(two_lines):
+def test_manual_break_label(two_lines):
     ds = build_dataset(two_lines, SETTINGS, date_from=START, date_to=END, as_of=AS_OF)
     edited = replace(SETTINGS, manual_break_label="PAID")  # a settings file changed after `base`
     frame = analysis_frame(ds, edited).set_index(["product_line", "agreement_id"])
     assert frame.loc[("auto", 103)].prior_manual_breaks == 1
 
 
-def test_a_break_made_after_the_agreement_is_not_history(enriched):
+def test_later_break(enriched):
     assert enriched.loc[("auto", 102)].prior_breaks == 0  # 93 was made on 03-20, 102 on 03-02
     assert enriched.loc[("auto", 108)].prior_breaks == 0  # its own break does not count
 
@@ -427,7 +427,7 @@ def test_ratio_states(enriched):
     assert str(enriched.loc[("auto", 109)].first_installment_ratio) == "nan"
 
 
-def test_zero_balance_is_not_the_same_as_no_link(tmp_path):
+def test_zero_balance(tmp_path):
     rows = [
         (1, 5, 1, 1, 0, 100.0, 1, None, "2026-03-01", "2026-03-10", None, "ACTIVE", "a1"),
     ]
@@ -465,7 +465,7 @@ class ReversedRows:
         self._inner.close()
 
 
-def test_the_dataset_does_not_depend_on_the_order_rows_come_back_in(two_lines):
+def test_row_order(two_lines):
     normal = build_dataset(two_lines, SETTINGS, date_from=START, date_to=END, as_of=AS_OF)
     flipped = build_dataset(
         {line: ReversedRows(db) for line, db in two_lines.items()},

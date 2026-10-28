@@ -39,44 +39,44 @@ def frame():
     return dataset(ROWS).base_frame()
 
 
-def test_a_payment_after_the_reference_date_did_not_exist_yet(frame):
+def test_payment_after_reference(frame):
     then = bucket_at(frame, REFERENCE, GRACE)
     now = bucket_at(frame, AS_OF, GRACE)
     assert then.iloc[0] == derive.OVERDUE_UNPAID
     assert now.iloc[0] == derive.PAID_ON_TIME
 
 
-def test_an_agreement_made_after_the_reference_date_is_not_counted(frame):
+def test_agreement_after_reference(frame):
     assert bucket_at(frame, REFERENCE, GRACE).iloc[1] == NOT_YET
     assert bucket_at(frame, AS_OF, GRACE).iloc[1] == derive.TO_MATURE
 
 
-def test_replaying_the_present_changes_nothing(frame):
+def test_replay_present(frame):
     same = replay(frame, AS_OF, AS_OF, GRACE)
     assert same.movers.empty and same.entered == 0
     assert (same.then == same.current).all()
 
 
-def test_movers_and_entrants_explain_the_whole_difference(frame):
+def test_movers_and_entrants(frame):
     result = replay(frame, REFERENCE, AS_OF, GRACE)
     assert result.movers["agreement_id"].tolist() == [1]
     assert result.entered == 1  # slip 4
     assert result.unpaid_now() - result.unpaid_then() == result.entered - len(result.movers)
 
 
-def test_the_transition_matrix_accounts_for_every_slip(frame):
+def test_transition_matrix(frame):
     result = replay(frame, REFERENCE, AS_OF, GRACE)
     assert int(result.transitions.to_numpy().sum()) == len(frame)
     assert result.transitions.loc[derive.OVERDUE_UNPAID, derive.PAID_ON_TIME] == 1
     assert result.transitions.loc[NOT_YET, derive.TO_MATURE] == 1
 
 
-def test_the_reference_cannot_be_after_the_dataset_date(frame):
+def test_reference_after_dataset(frame):
     with pytest.raises(ConfigError, match="after the dataset reference date"):
         replay(frame, date(2026, 4, 1), AS_OF, GRACE)
 
 
-def test_value_measures_and_the_closest_one(frame):
+def test_value_measures(frame):
     result = replay(frame, REFERENCE, AS_OF, GRACE)
     sums = measure_sums(frame, result.current)
     # unpaid now: slips 3 and 4. first installment 100 + 100, whole agreement 700 + 100.
@@ -88,7 +88,7 @@ def test_value_measures_and_the_closest_one(frame):
     assert closest_measure(0.0, sums)[0][2] == float("inf")
 
 
-def test_the_report_names_the_measure_a_headline_sums(frame):
+def test_headline_measure(frame):
     result = replay(frame, REFERENCE, AS_OF, GRACE)
     text = render(frame, result, headline_value=800.0, headline_count=2).render()
     assert "Closest: **whole agreement**" in text

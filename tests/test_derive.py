@@ -16,20 +16,20 @@ def classify(paid_date, paid_amount, as_of):
     return derive.classify(DUE, paid_date, paid_amount, as_of=as_of, grace_days=GRACE)
 
 
-def test_paid_on_the_last_day_of_grace_counts_as_on_time():
+def test_last_day_of_grace():
     assert classify(date(2026, 3, 13), 10.0, date(2026, 3, 31)) == derive.PAID_ON_TIME
 
 
-def test_paid_one_day_after_grace_is_unpaid():
+def test_one_day_late():
     assert classify(date(2026, 3, 14), 10.0, date(2026, 3, 31)) == derive.OVERDUE_UNPAID
 
 
-def test_paid_early_counts_as_on_time():
+def test_paid_early():
     assert classify(date(2026, 3, 1), 10.0, date(2026, 3, 31)) == derive.PAID_ON_TIME
 
 
 @pytest.mark.parametrize("amount", [0.0, None, -5.0])
-def test_a_payment_without_money_is_not_a_payment(amount):
+def test_no_money(amount):
     assert classify(date(2026, 3, 11), amount, date(2026, 3, 31)) == derive.OVERDUE_UNPAID
 
 
@@ -37,23 +37,23 @@ def test_no_payment_date_means_unpaid():
     assert classify(None, 10.0, date(2026, 3, 31)) == derive.OVERDUE_UNPAID
 
 
-def test_the_due_date_itself_is_not_yet_overdue():
+def test_due_date_itself():
     assert classify(None, None, DUE) == derive.TO_MATURE
     assert classify(None, None, date(2026, 3, 11)) == derive.OVERDUE_UNPAID
 
 
-def test_a_slip_inside_its_grace_window_is_overdue_but_not_mature():
+def test_inside_grace_window():
     as_of = date(2026, 3, 12)
     assert classify(None, None, as_of) == derive.OVERDUE_UNPAID
     assert not derive.is_mature(DUE, as_of=as_of, grace_days=GRACE)
 
 
-def test_maturity_starts_the_day_after_the_grace_window_ends():
+def test_maturity_boundary():
     assert not derive.is_mature(DUE, as_of=date(2026, 3, 13), grace_days=GRACE)
     assert derive.is_mature(DUE, as_of=date(2026, 3, 14), grace_days=GRACE)
 
 
-def test_a_payment_after_the_reference_date_did_not_exist_yet():
+def test_payment_after_as_of():
     # Paid on the 12th, looked at on the 11th: still overdue then.
     assert classify(date(2026, 3, 12), 10.0, date(2026, 3, 11)) == derive.OVERDUE_UNPAID
     assert classify(date(2026, 3, 12), 10.0, date(2026, 3, 12)) == derive.PAID_ON_TIME

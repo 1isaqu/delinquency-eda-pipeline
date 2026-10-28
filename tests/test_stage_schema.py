@@ -14,7 +14,7 @@ from clirun import run_cli, sqlite_args
 from world import damage
 
 
-def test_check_table_reports_missing_required_missing_optional_and_extra():
+def test_check_table():
     spec = TableSpec("t", required=("a", "b"), optional=("c",))
     check = check_table(spec, [ColumnInfo("A", "int", False), ColumnInfo("x", "text", True)])
     assert check.missing_required == ["b"]
@@ -23,18 +23,18 @@ def test_check_table_reports_missing_required_missing_optional_and_extra():
     assert check.exists and not check.ok
 
 
-def test_names_match_case_insensitively():
+def test_case_insensitive_names():
     spec = TableSpec("t", required=("agreement_id",))
     assert check_table(spec, [ColumnInfo("AGREEMENT_ID", "int", False)]).ok
 
 
-def test_an_absent_table_is_not_ok_and_lists_no_columns():
+def test_absent_table():
     check = check_table(TableSpec("t", required=("a",)), [])
     assert not check.exists and not check.ok
     assert check.missing_required == []
 
 
-def test_the_test_world_satisfies_the_whole_contract(world):
+def test_world_satisfies_contract(world):
     with SQLiteDatabase.open(world) as db:
         line = check_database(db, "auto", Settings())
     assert line.ready("slips") and line.ready("base")
@@ -42,7 +42,7 @@ def test_the_test_world_satisfies_the_whole_contract(world):
     assert {t.spec.name for t in line.tables} == {t.name for t in TABLES}
 
 
-def test_contact_events_lists_only_agent_id_as_optional(world):
+def test_optional_columns(world):
     with SQLiteDatabase.open(world) as db:
         line = check_database(db, "auto", Settings())
     events = next(t for t in line.tables if t.spec.name == "contact_events")
@@ -50,7 +50,7 @@ def test_contact_events_lists_only_agent_id_as_optional(world):
     assert events.missing_optional == []
 
 
-def test_a_missing_base_only_table_leaves_the_slip_stages_ready(world):
+def test_base_only_table(world):
     connection = sqlite3.connect(world)
     connection.execute("DROP TABLE debtors")
     connection.commit()
@@ -61,7 +61,7 @@ def test_a_missing_base_only_table_leaves_the_slip_stages_ready(world):
     assert not line.ready("base")
 
 
-def test_a_configured_status_label_missing_from_the_catalog_is_reported(world):
+def test_missing_label(world):
     settings = Settings(generated_status_labels=("ACTIVE", "NOT_A_STATUS"))
     with SQLiteDatabase.open(world) as db:
         line = check_database(db, "auto", settings)
@@ -69,7 +69,7 @@ def test_a_configured_status_label_missing_from_the_catalog_is_reported(world):
     assert not line.ready("slips")
 
 
-def test_status_labels_are_not_checked_without_a_catalog(world):
+def test_no_catalog(world):
     connection = sqlite3.connect(world)
     connection.execute("DROP TABLE agreement_statuses")
     connection.commit()
@@ -80,21 +80,21 @@ def test_status_labels_are_not_checked_without_a_catalog(world):
     assert "not checked" in render([line]).render()
 
 
-def test_configured_labels_are_unique_and_ordered():
+def test_configured_labels():
     settings = Settings(
         generated_status_labels=("A", "B"), broken_status_labels=("B", "C"), manual_break_label="C"
     )
     assert configured_labels(settings) == ["A", "B", "C"]
 
 
-def test_the_report_lists_types_of_required_columns(world):
+def test_report_types(world):
     with SQLiteDatabase.open(world) as db:
         text = render([check_database(db, "auto", Settings())]).render()
     assert "Types of the required columns found" in text
     assert "| agreements | installment_no |" in text
 
 
-def test_cli_exits_zero_when_ready_and_one_when_not(world, tmp_path):
+def test_cli_exit_codes(world, tmp_path):
     out_dir = str(tmp_path / "r")
     code, out = run_cli(*sqlite_args(("auto", world)), "--out-dir", out_dir, "schema")
     assert code == 0 and "ready for base = True" in out

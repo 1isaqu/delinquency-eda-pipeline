@@ -29,44 +29,44 @@ def result():
     return measure(ds.base_frame(), 3)
 
 
-def test_the_bucket_is_split_at_the_end_of_the_grace_window(result):
+def test_bucket_split(result):
     assert (result.unpaid, result.definitive, result.still_open) == (4, 2, 2)
 
 
-def test_the_boundary_day_is_still_open(result):
+def test_boundary_day(result):
     states = dict(zip(result.by_due_date["due_date"], result.by_due_date["state"], strict=True))
     assert states["2026-03-27"] == FINAL
     assert states["2026-03-28"] == OPEN
 
 
-def test_inflation_is_the_naive_count_over_the_definitive_count(result):
+def test_inflation(result):
     assert result.inflation == pytest.approx(4 / 2)
 
 
-def test_values_are_split_with_the_counts(result):
+def test_value_split(result):
     assert result.value_definitive == pytest.approx(150.0)  # 100 + 50
     assert result.value_open == pytest.approx(200.0)
 
 
-def test_the_mature_rate_has_a_denominator_that_cannot_move(result):
+def test_mature_rate(result):
     # all six slips: row 1 paid on time. mature = rows 1, 2, 6 (rows 3-5 are not past grace).
     assert result.naive_on_time_rate == pytest.approx(1 / 6)
     assert result.mature == 3
     assert result.mature_on_time_rate == pytest.approx(1 / 3)
 
 
-def test_when_nothing_is_definitive_the_inflation_is_undefined():
+def test_undefined_inflation():
     ds = dataset([raw(1, due_date="2026-03-30")])
     assert math.isnan(measure(ds.base_frame(), 3).inflation)
 
 
-def test_the_by_line_table_counts_each_product_line(result):
+def test_by_line_table(result):
     by_line = result.by_line.set_index("product_line")
     assert (by_line.loc["auto", "unpaid"], by_line.loc["auto", "still_open"]) == (3, 2)
     assert by_line.loc["consumer", "definitive"] == 1
 
 
-def test_the_report_summarizes_old_due_dates_instead_of_listing_them_all():
+def test_old_due_dates():
     rows = [raw(i, due_date=f"2026-02-{i:02d}") for i in range(1, 11)] + [
         raw(20, due_date="2026-03-29")
     ]

@@ -35,7 +35,7 @@ def table_rows(text: str, header_start: str) -> list[list[str]]:
     return rows
 
 
-def test_every_command_in_a_code_block_parses():
+def test_commands_parse():
     commands = [
         line.strip()
         for block in fenced_blocks(README)
@@ -48,7 +48,7 @@ def test_every_command_in_a_code_block_parses():
         build_parser().parse_args(argv)  # raises SystemExit on an unknown stage or option
 
 
-def test_the_quick_start_runs_every_stage_except_the_ones_noted():
+def test_quick_start_stages():
     block = next(b for b in fenced_blocks(README) if "build_demo_db.py" in b)
     used = {
         shlex.split(line)[1]
@@ -58,7 +58,7 @@ def test_the_quick_start_runs_every_stage_except_the_ones_noted():
     assert used == {s.command for s in STAGES}
 
 
-def test_the_stage_table_matches_the_registry():
+def test_stage_table():
     rows = table_rows(README, "| # | Command")
     listed = [(int(r[0]), r[1].strip("`")) for r in rows]
     assert listed == [(s.number, s.command) for s in STAGES]
@@ -70,7 +70,7 @@ def _default_text(value: object) -> str:
     return str(value)
 
 
-def test_every_setting_is_documented_with_its_real_default():
+def test_settings_documented():
     rows = {
         r[0].strip("`"): r[1].strip("`").replace("\\|", "|")
         for r in table_rows(README, "| Setting")
@@ -91,14 +91,14 @@ def test_every_setting_is_documented_with_its_real_default():
     }
 
 
-def test_every_environment_variable_in_the_example_file_is_documented():
+def test_env_vars_documented():
     names = re.findall(r"^#?\s*(DEA_[A-Z_]+)=", (ROOT / ".env.example").read_text(), re.MULTILINE)
     assert len(names) >= 10
     for name in names:
         assert f"`{name}`" in README, name
 
 
-def test_example_settings_file_is_valid_and_matches_the_defaults():
+def test_example_settings_valid():
     loaded = Settings.from_file(ROOT / "examples" / "settings.example.json")
     defaults = Settings()
     for field in fields(Settings):
@@ -109,13 +109,13 @@ def test_example_settings_file_is_valid_and_matches_the_defaults():
     assert loaded.system_agents == ("batch_loader",)
 
 
-def test_example_settings_file_names_every_setting():
+def test_example_settings_complete():
     raw = json.loads((ROOT / "examples" / "settings.example.json").read_text(encoding="utf-8"))
     assert set(raw) == {f.name for f in fields(Settings)}
     assert set(raw["model"]) == {f.name for f in fields(ModelSettings)}
 
 
-def test_relative_links_point_at_files_that_exist():
+def test_relative_links():
     links = re.findall(r"\]\(([^)#]+?)\)", README)
     local = [target for target in links if not target.startswith(("http://", "https://"))]
     assert {
@@ -128,7 +128,7 @@ def test_relative_links_point_at_files_that_exist():
         assert (ROOT / target).exists(), target
 
 
-def test_files_named_in_backticks_exist_unless_the_pipeline_generates_them():
+def test_named_files_exist():
     generated = {"data/dataset.json", "reports/", "data/demo", ".env"}
     tokens = set(re.findall(r"`([A-Za-z0-9_./-]+)`", README))
     paths = {t for t in tokens if "/" in t or t.endswith((".py", ".json", ".md", ".example"))}
@@ -139,7 +139,7 @@ def test_files_named_in_backticks_exist_unless_the_pipeline_generates_them():
         assert (ROOT / path).exists(), path
 
 
-def test_the_layout_block_only_names_files_and_folders_that_exist():
+def test_layout_block():
     block = next(b for b in fenced_blocks(README) if b.lstrip().startswith("src/delinquency_eda/"))
     names = set(re.findall(r"[\w.-]+\.(?:py|json|md|yml)|[\w.-]+/(?=\s|$)", block))
     assert {"cli.py", "stages/", "db/", "build_demo_db.py", "ci.yml", "data-contract.md"} <= names
@@ -152,7 +152,7 @@ MARKDOWN_PAGES = ["README.md", *sorted(f"docs/{p.name}" for p in (ROOT / "docs")
 
 
 @pytest.mark.parametrize("page", MARKDOWN_PAGES)
-def test_every_table_row_has_as_many_cells_as_its_header(page):
+def test_table_cells(page):
     """GitHub splits a cell at every unescaped pipe, inside backticks too."""
     header, fenced = None, False
     for number, line in enumerate((ROOT / page).read_text(encoding="utf-8").splitlines(), 1):
@@ -169,12 +169,12 @@ def test_every_table_row_has_as_many_cells_as_its_header(page):
 @pytest.mark.parametrize(
     "page", ["architecture", "data-contract", "data-sources", "stages", "decisions", "glossary"]
 )
-def test_every_doc_page_exists_and_has_a_title(page):
+def test_doc_pages(page):
     text = (ROOT / "docs" / f"{page}.md").read_text(encoding="utf-8")
     assert text.startswith("# ")
 
 
-def test_the_readme_has_the_required_sections():
+def test_readme_sections():
     for heading in (
         "## Quick start",
         "## Connect your own data",
@@ -189,7 +189,7 @@ def test_the_readme_has_the_required_sections():
     assert "contains no" in README and "real data" in README
 
 
-def test_ci_runs_the_quick_start_stage_by_stage():
+def test_ci_stages():
     workflow = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
     for stage in STAGES:
         assert f"delinquency-eda {stage.command}" in workflow, stage.command
@@ -197,7 +197,7 @@ def test_ci_runs_the_quick_start_stage_by_stage():
     assert "DEA_CONFIG: examples/settings.example.json" in workflow
 
 
-def test_the_contract_table_in_the_readme_matches_the_contract():
+def test_contract_table():
     from delinquency_eda.contract import TABLES
 
     rows = table_rows(README, "| Table | One row per")

@@ -30,7 +30,7 @@ def frame():
     return F.analysis_frame(dataset(_rows()), SETTINGS)
 
 
-def test_baseline_uses_only_the_mature_cohort(frame):
+def test_baseline(frame):
     result = analyze(frame, SETTINGS)
     # mature rows: 1 (paid), 2 and 3 (unpaid). Row 4 is censored, row 5 is not due.
     assert result.mature_slips == 3
@@ -40,7 +40,7 @@ def test_baseline_uses_only_the_mature_cohort(frame):
     assert result.unpaid_slips == 3
 
 
-def test_concentration_covers_the_whole_bucket_discrimination_only_the_mature(frame):
+def test_two_populations(frame):
     tables = analyze(frame, SETTINGS).tables["agent"]
     assert tables.concentration["slips"].sum() == 3
     assert tables.discrimination["mature"].sum() == 3
@@ -49,13 +49,13 @@ def test_concentration_covers_the_whole_bucket_discrimination_only_the_mature(fr
     assert by_agent.loc["a1", "rate"] == 0.0  # row 1 paid; rows 4 and 5 are not mature
 
 
-def test_every_factor_is_computed_and_every_factor_is_in_a_section(frame):
+def test_factors(frame):
     result = analyze(frame, SETTINGS)
     assert set(result.tables) == set(FACTORS)
     assert {k for _, keys in SECTIONS for k in keys} == set(FACTORS)
 
 
-def test_the_report_states_what_each_table_is_and_that_it_is_observational(frame):
+def test_report_wording(frame):
     ds = dataset(_rows())
     text = render(frame, ds, analyze(frame, SETTINGS)).render()
     assert "Observational" in text
@@ -65,7 +65,7 @@ def test_the_report_states_what_each_table_is_and_that_it_is_observational(frame
     assert "### " not in agent_section  # one factor in the section: no repeated sub-heading
 
 
-def test_a_zero_balance_gets_its_own_group_instead_of_the_missing_ones():
+def test_zero_balance_group():
     rows = [raw(1, original_debt=0.0), raw(2, original_debt=None), raw(3, original_debt=1000.0)]
     frame = F.analysis_frame(dataset(rows), SETTINGS)
     groups = analyze(frame, SETTINGS).tables["ratio"].concentration["group"].tolist()
@@ -82,7 +82,7 @@ def test_cli_writes_the_report(tmp_path):
     assert "baseline=" in out
 
 
-def test_cli_refuses_an_empty_dataset(tmp_path):
+def test_cli_empty_dataset(tmp_path):
     path = dataset([]).save(tmp_path / "ds.json")
     code, _ = run_cli("analysis", "--dataset", str(path), "--out-dir", str(tmp_path / "r"))
     assert code == 2
