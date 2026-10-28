@@ -36,7 +36,7 @@ def resealed(path, change):
     return edited(path, apply)
 
 
-def test_an_admitted_dataset_round_trips_with_its_record_and_seal(tmp_path):
+def test_round_trip(tmp_path):
     path = written(tmp_path)
     payload = json.loads(path.read_text(encoding="utf-8"))
     assert payload["seal"]["algorithm"] == "sha256"
@@ -52,7 +52,7 @@ def test_an_admitted_dataset_round_trips_with_its_record_and_seal(tmp_path):
     [None, {}, {"passed": False}, {"passed": "yes"}, {"passed": 1.0}],
     ids=["none", "empty", "failed", "text", "number"],
 )
-def test_a_dataset_that_was_not_admitted_cannot_be_written(tmp_path, admission):
+def test_save_needs_admission(tmp_path, admission):
     ds = dataset([raw(1)])
     ds.admission = admission
     with pytest.raises(DatasetError, match="did not pass the entry contract"):
@@ -60,39 +60,39 @@ def test_a_dataset_that_was_not_admitted_cannot_be_written(tmp_path, admission):
     assert not (tmp_path / "ds.json").exists()
 
 
-def test_the_seal_does_not_depend_on_the_order_of_keys_in_the_file(tmp_path):
+def test_key_order(tmp_path):
     path = written(tmp_path)
     payload = json.loads(path.read_text(encoding="utf-8"))
     path.write_text(json.dumps(dict(reversed(payload.items()))), encoding="utf-8")
     assert len(Dataset.load(path).base) == 3
 
 
-def test_a_changed_value_breaks_the_seal(tmp_path):
+def test_edited_value(tmp_path):
     path = edited(written(tmp_path), lambda p: p["base"][0].update(first_installment_value=1.0))
     with pytest.raises(DatasetError, match="does not match its seal"):
         Dataset.load(path)
 
 
-def test_a_changed_admission_record_breaks_the_seal(tmp_path):
+def test_edited_record(tmp_path):
     path = edited(written(tmp_path), lambda p: p["admission"].update(note="looks fine"))
     with pytest.raises(DatasetError, match="does not match its seal"):
         Dataset.load(path)
 
 
-def test_a_cut_table_is_reported_by_name_and_count(tmp_path):
+def test_cut_table(tmp_path):
     path = edited(written(tmp_path), lambda p: p["base"].pop())
     with pytest.raises(DatasetError, match=r"'base' has 2 rows and its seal says 3"):
         Dataset.load(path)
 
 
-def test_an_added_row_is_caught_too(tmp_path):
+def test_added_row(tmp_path):
     path = edited(written(tmp_path), lambda p: p["contacts"].append({}))
     with pytest.raises(DatasetError, match=r"'contacts' has 1 rows and its seal says 0"):
         Dataset.load(path)
 
 
 @pytest.mark.parametrize("seal", [None, {}, {"algorithm": "md5", "digest": "x"}, "sealed"])
-def test_a_file_without_a_usable_seal_is_refused(tmp_path, seal):
+def test_no_seal(tmp_path, seal):
     def change(payload):
         payload.pop("seal")
         if seal is not None:
@@ -103,38 +103,38 @@ def test_a_file_without_a_usable_seal_is_refused(tmp_path, seal):
         Dataset.load(path)
 
 
-def test_a_file_whose_admission_failed_is_refused_even_when_it_is_sealed(tmp_path):
+def test_failed_admission(tmp_path):
     path = resealed(written(tmp_path), lambda p: p["admission"].update(passed=False))
     with pytest.raises(DatasetError, match="did not pass the entry contract"):
         Dataset.load(path)
 
 
-def test_a_file_without_an_admission_record_is_refused_even_when_it_is_sealed(tmp_path):
+def test_no_admission(tmp_path):
     path = resealed(written(tmp_path), lambda p: p.pop("admission"))
     with pytest.raises(DatasetError, match="did not pass the entry contract"):
         Dataset.load(path)
 
 
-def test_a_file_from_before_the_contract_is_refused_as_an_old_version(tmp_path):
+def test_old_version(tmp_path):
     path = edited(written(tmp_path), lambda p: p["meta"].update(schema_version=1))
     assert SCHEMA_VERSION == 2
     with pytest.raises(DatasetError, match="schema version 1 is not 2"):
         Dataset.load(path)
 
 
-def test_the_digest_covers_the_meta_block(tmp_path):
+def test_meta_is_sealed(tmp_path):
     path = edited(written(tmp_path), lambda p: p["meta"].update(grace_days=30))
     with pytest.raises(DatasetError, match="does not match its seal"):
         Dataset.load(path)
 
 
-def test_the_digest_is_a_function_of_content_only():
+def test_digest():
     body = {"a": [1, 2], "b": {"x": 1.5, "y": None}}
     assert content_digest(body) == content_digest({"b": {"y": None, "x": 1.5}, "a": [1, 2]})
     assert content_digest(body) != content_digest({**body, "a": [2, 1]})
 
 
-def test_saving_twice_gives_the_same_bytes(tmp_path):
+def test_deterministic_save(tmp_path):
     first = written(tmp_path)
     second = dataset([raw(1), paid_on_time(2), raw(3, due_date="2026-03-20")]).save(
         tmp_path / "again.json"

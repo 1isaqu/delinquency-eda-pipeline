@@ -32,21 +32,21 @@ def slip(**overrides):
     return {**SLIP, **overrides}
 
 
-def test_a_clean_slip_passes_every_rule_and_is_kept():
+def test_clean_slip():
     intake = Intake()
     assert intake.accept("slips", [slip()]) == [slip()]
     for rule in (REQUIRED, READABLE, PAYMENT):
         assert (intake.tallies[rule].checked, intake.tallies[rule].violations) == (1, 0)
 
 
-def test_a_paid_slip_with_its_date_is_clean():
+def test_paid_slip():
     row = slip(paid_amount=100.0, paid_date="2026-03-11")
     assert Intake().accept("slips", [row]) == [row]
 
 
 @pytest.mark.parametrize("column", ["agent_id", "due_date", "agreement_date", "debtor_id"])
 @pytest.mark.parametrize("empty", [None, "", "   ", float("nan")])
-def test_a_missing_required_value_is_counted_and_the_row_left_out(column, empty):
+def test_missing_required(column, empty):
     intake = Intake()
     assert intake.accept("slips", [slip(**{column: empty}), slip()]) == [slip()]
     tally = intake.tallies[REQUIRED]
@@ -54,7 +54,7 @@ def test_a_missing_required_value_is_counted_and_the_row_left_out(column, empty)
     assert tally.detail == {f"slips.{column}": 1}
 
 
-def test_a_row_with_two_missing_values_is_one_violation_and_two_details():
+def test_two_flaws_one_row():
     intake = Intake()
     intake.accept("slips", [slip(agent_id=None, due_date=None)])
     tally = intake.tallies[REQUIRED]
@@ -62,7 +62,7 @@ def test_a_row_with_two_missing_values_is_one_violation_and_two_details():
     assert tally.detail == {"slips.agent_id": 1, "slips.due_date": 1}
 
 
-def test_optional_values_may_be_null():
+def test_optional_nulls():
     row = slip(person_key=None, original_debt=None, portfolio_label=None, paid_amount=None)
     assert Intake().accept("slips", [row]) == [row]
 
@@ -81,7 +81,7 @@ def test_optional_values_may_be_null():
         ("total_installments", 2.5),
     ],
 )
-def test_an_unreadable_value_is_counted_instead_of_stopping_the_build(column, bad):
+def test_unreadable_value(column, bad):
     intake = Intake()
     assert intake.accept("slips", [slip(**{column: bad})]) == []
     assert intake.tallies[READABLE].detail == {f"slips.{column}": 1}
@@ -101,7 +101,7 @@ def test_an_unreadable_value_is_counted_instead_of_stopping_the_build(column, ba
         ("total_installments", Decimal("3")),
     ],
 )
-def test_every_form_a_driver_returns_is_readable(good):
+def test_driver_forms(good):
     column, value = good
     assert Intake().accept("slips", [slip(**{column: value})]) == [slip(**{column: value})]
 
@@ -116,14 +116,14 @@ def test_every_form_a_driver_returns_is_readable(good):
         {"paid_amount": 0.0, "paid_date": None},
     ],
 )
-def test_a_payment_must_be_positive_and_come_with_its_date(flaw):
+def test_payment_flaws(flaw):
     intake = Intake()
     assert intake.accept("slips", [slip(**flaw)]) == []
     tally = intake.tallies[PAYMENT]
     assert (tally.checked, tally.violations) == (1, 1)
 
 
-def test_the_payment_rule_names_what_is_wrong():
+def test_payment_detail():
     intake = Intake()
     intake.accept("slips", [slip(paid_amount=0.0, paid_date=None)])
     assert intake.tallies[PAYMENT].detail == {
@@ -132,7 +132,7 @@ def test_the_payment_rule_names_what_is_wrong():
     }
 
 
-def test_the_payment_rule_does_not_apply_to_other_tables():
+def test_payment_only_slips():
     intake = Intake()
     row = CONTACT | {"answered": 1, "right_party": 0}
     assert intake.accept("contacts", [row]) == [row]
@@ -143,25 +143,27 @@ CONTACT = {"debtor_id": 1, "contact_date": "2026-03-02", "result_id": 3}
 
 
 @pytest.mark.parametrize("flag", ["Y", "N", "yes", "0", 2, -1, 0.5])
-def test_a_flag_that_is_not_zero_or_one_is_unreadable(flag):
+def test_bad_flag(flag):
+    # bool('N') is True, so a text flag has to be refused, not coerced.
     intake = Intake()
     assert intake.accept("contacts", [CONTACT | {"answered": flag, "right_party": 1}]) == []
     assert intake.tallies[READABLE].detail == {"contacts.answered": 1}
 
 
 @pytest.mark.parametrize("empty", [None, "", "  "])
-def test_a_missing_flag_is_not_read_as_false(empty):
+def test_missing_flag(empty):
+    # bool(None) is False, so a NULL flag must not slip through as 'no'.
     intake = Intake()
     assert intake.accept("contacts", [CONTACT | {"answered": 1, "right_party": empty}]) == []
     assert intake.tallies[REQUIRED].detail == {"contacts.right_party": 1}
 
 
 @pytest.mark.parametrize("flag", [0, 1, True, False, 1.0, Decimal(0)])
-def test_zero_and_one_are_flags(flag):
+def test_flag_values(flag):
     assert reads_as_flag(flag)
 
 
-def test_breaks_and_debtors_are_judged_too():
+def test_breaks_and_debtors():
     intake = Intake()
     broken = {"debtor_id": 1, "agreement_id": 9, "portfolio_id": 1, "status_id": 2}
     assert intake.accept("breaks", [broken | {"agreement_date": "2026-01-01"}])
@@ -170,7 +172,7 @@ def test_breaks_and_debtors_are_judged_too():
     assert intake.accept("debtors", [{"debtor_id": 1, "person_key": None}])
 
 
-def test_helpers_agree_with_the_contract_on_what_is_missing_and_readable():
+def test_helpers():
     assert is_missing(None) and is_missing("") and is_missing(float("nan"))
     assert not is_missing(0) and not is_missing(0.0) and not is_missing("0")
     assert reads_as_date("2026-03-05") and not reads_as_date("2026/03/05")
@@ -181,7 +183,7 @@ def test_helpers_agree_with_the_contract_on_what_is_missing_and_readable():
 # ---- the query log -------------------------------------------------------------------------
 
 
-def test_the_fingerprint_ignores_the_length_of_an_in_list():
+def test_fingerprint():
     short = "SELECT 1 WHERE x IN (?, ?) AND y = ?"
     long = "SELECT 1 WHERE x IN (?, ?, ?, ?, ?) AND y = ?"
     assert fingerprint(short) == fingerprint(long)
@@ -189,7 +191,7 @@ def test_the_fingerprint_ignores_the_length_of_an_in_list():
     assert len(fingerprint(short)) == 64
 
 
-def test_every_run_is_logged_with_its_row_count(world):
+def test_query_log(world):
     intake = Intake()
     with SQLiteDatabase.open(world) as db:
         query = Query("SELECT agent_id FROM agents WHERE agent_id IN (?, ?)", ("a1", "a2"))
@@ -207,7 +209,7 @@ def test_every_run_is_logged_with_its_row_count(world):
     assert log[0]["sha256"] == fingerprint(query.sql)
 
 
-def test_the_log_is_sorted_so_the_same_build_gives_the_same_record(world):
+def test_query_log_order(world):
     first, second = Intake(), Intake()
     with SQLiteDatabase.open(world) as db:
         for intake, order in ((first, ("b", "a")), (second, ("a", "b"))):

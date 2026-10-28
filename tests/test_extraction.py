@@ -134,13 +134,14 @@ def test_in_lists_have_one_marker_per_value():
 
 
 @pytest.mark.parametrize("dialect", [SQLiteDialect(), SQLServerDialect()], ids=["sqlite", "tsql"])
-def test_the_second_route_is_read_only_and_binds_one_value_per_marker(dialect):
+def test_recon_sql_is_read_only(dialect):
     for query in reconcile_queries(dialect):
         ensure_read_only(query.sql)
         assert query.sql.count("?") == len(query.params)
 
 
-def test_the_second_route_shares_no_ranking_function_and_no_lookup_join_with_the_first():
+def test_recon_sql_is_independent():
+    # The second route must not be able to fail the way the first one can.
     for dialect in (SQLiteDialect(), SQLServerDialect()):
         for query in reconcile_queries(dialect):
             assert "ROW_NUMBER" not in query.sql
@@ -148,7 +149,7 @@ def test_the_second_route_shares_no_ranking_function_and_no_lookup_join_with_the
             assert "OUTER APPLY" not in query.sql
 
 
-def test_the_second_route_binds_dates_the_way_each_dialect_does():
+def test_recon_date_binding():
     server = build_reconcile_slips_query(SQLServerDialect(), SETTINGS, START, END, AS_OF)
     lite = build_reconcile_slips_query(SQLiteDialect(), SETTINGS, START, END, AS_OF)
     assert server.params[:2] == (date(2026, 3, 1), date(2026, 4, 1))
@@ -160,7 +161,7 @@ def test_the_second_route_binds_dates_the_way_each_dialect_does():
     assert breaks.params == ("BROKEN", "AUTO_BROKEN", 7, 8)
 
 
-def test_the_outcome_rule_is_written_again_in_each_dialects_date_arithmetic():
+def test_recon_date_arithmetic():
     lite = build_reconcile_slips_query(SQLiteDialect(), SETTINGS, START, END, AS_OF).sql
     server = build_reconcile_slips_query(SQLServerDialect(), SETTINGS, START, END, AS_OF).sql
     assert "date(date(l.due_at), '+3 days')" in lite and "date(l.paid_at) <= ?" in lite
@@ -172,7 +173,7 @@ def test_the_outcome_rule_is_written_again_in_each_dialects_date_arithmetic():
     assert "'+10 days'" in longer
 
 
-def test_without_excluded_patterns_the_second_route_has_no_agent_filter():
+def test_recon_without_agent_patterns():
     settings = Settings(excluded_agent_patterns=())
     query = build_reconcile_slips_query(SQLiteDialect(), settings, START, END, AS_OF)
     assert "LIKE" not in query.sql

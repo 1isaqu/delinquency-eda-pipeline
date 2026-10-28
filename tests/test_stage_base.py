@@ -97,7 +97,7 @@ def build(world, tmp_path, name="dataset.json"):
     return code, out, target
 
 
-def test_an_admitted_build_writes_the_dataset_and_both_reports(world, tmp_path):
+def test_admitted_build(world, tmp_path):
     code, out, target = build(world, tmp_path)
     assert code == 0 and "entry contract: all 15 rules passed" in out
     assert (tmp_path / "r" / "base.md").exists()
@@ -108,7 +108,7 @@ def test_an_admitted_build_writes_the_dataset_and_both_reports(world, tmp_path):
     assert record["passed"] is True and len(record["rules"]) == 15
 
 
-def test_data_that_breaks_the_contract_writes_no_dataset_and_exits_one(world, tmp_path):
+def test_rejected_build(world, tmp_path):
     damage(world, "UPDATE agreements SET paid_amount = 0 WHERE row_id = 1")
     code, out, target = build(world, tmp_path)
     assert code == 1
@@ -121,7 +121,7 @@ def test_data_that_breaks_the_contract_writes_no_dataset_and_exits_one(world, tm
     assert "**Result: REJECTED.**" in admission and "row.payment" in admission
 
 
-def test_a_rejected_build_leaves_the_earlier_dataset_as_it_was(world, tmp_path):
+def test_rejection_keeps_old_file(world, tmp_path):
     code, _, target = build(world, tmp_path)
     assert code == 0
     before = target.read_bytes()
@@ -133,7 +133,7 @@ def test_a_rejected_build_leaves_the_earlier_dataset_as_it_was(world, tmp_path):
     assert "was left as it was" in (tmp_path / "r" / "admission.md").read_text(encoding="utf-8")
 
 
-def test_a_source_that_fails_its_own_rules_is_never_queried_for_rows(world, tmp_path):
+def test_bad_source_not_queried(world, tmp_path):
     damage(world, "DROP TABLE contact_results")
     code, out, target = build(world, tmp_path)
     assert code == 1 and not target.exists()
@@ -141,7 +141,7 @@ def test_a_source_that_fails_its_own_rules_is_never_queried_for_rows(world, tmp_
     assert "auto.contact_results: table not found" in out
 
 
-def test_there_is_no_option_that_lets_a_failing_build_through():
+def test_no_bypass_option():
     """The options of ``base`` are its window and its date, and the options every stage shares."""
     parser = build_parser()
     base = next(

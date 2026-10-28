@@ -110,7 +110,7 @@ def test_cli_exits_zero_when_ready_and_one_when_not(world, tmp_path):
 # ---- declared types ------------------------------------------------------------------------
 
 
-def test_a_declared_type_outside_the_contract_family_is_reported():
+def test_wrong_type():
     spec = TableSpec("agreements", required=("amount", "due_at", "agent_id"))
     columns = [
         ColumnInfo("amount", "varchar(20)", False),
@@ -125,7 +125,7 @@ def test_a_declared_type_outside_the_contract_family_is_reported():
     assert check.structure_ok and not check.ok
 
 
-def test_types_of_optional_and_unknown_columns_are_not_judged():
+def test_unjudged_types():
     spec = TableSpec("debts", required=("debt_id", "balance"), optional=("due_at",))
     columns = [
         ColumnInfo("debt_id", "int", False),
@@ -136,13 +136,13 @@ def test_types_of_optional_and_unknown_columns_are_not_judged():
     assert check_table(spec, columns).ok
 
 
-def test_the_test_world_has_no_type_outside_the_contract(world):
+def test_world_types_fit(world):
     with SQLiteDatabase.open(world) as db:
         line = check_database(db, "auto", Settings())
     assert [m for t in line.tables for m in t.wrong_types] == []
 
 
-def test_a_wrong_type_makes_the_database_not_ready_and_the_command_exit_one(world, tmp_path):
+def test_wrong_type_not_ready(world, tmp_path):
     damage(
         world,
         "CREATE TABLE d2 (debtor_id TEXT, person_key INTEGER);"
@@ -160,7 +160,7 @@ def test_a_wrong_type_makes_the_database_not_ready_and_the_command_exit_one(worl
     assert "| WRONG |" in report and "| wrong type |" in report
 
 
-def test_the_report_names_the_kind_each_column_must_have(world):
+def test_report_kinds(world):
     with SQLiteDatabase.open(world) as db:
         text = render([check_database(db, "auto", Settings())]).render()
     assert "| agreements | due_at | text | yes | date | ok |" in text

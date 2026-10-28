@@ -59,7 +59,7 @@ def by_id(admission: Admission) -> dict:
 # ---- a clean build -------------------------------------------------------------------------
 
 
-def test_the_test_world_passes_every_rule(world):
+def test_clean_world(world):
     admission = judge(world)
     assert admission.passed
     assert [r.id for r in admission.results] == list(RULE_IDS)
@@ -68,7 +68,7 @@ def test_the_test_world_passes_every_rule(world):
     assert admission.dataset is not None and len(admission.dataset.base) == 5
 
 
-def test_the_record_stored_in_the_dataset_says_how_each_rule_came_out(world):
+def test_record(world):
     record = judge(world).dataset.admission
     assert record["passed"] is True
     assert record["contract_version"] == CONTRACT_VERSION
@@ -78,7 +78,7 @@ def test_the_record_stored_in_the_dataset_says_how_each_rule_came_out(world):
     assert json.loads(json.dumps(record)) == record, "the record is plain JSON"
 
 
-def test_the_ledger_follows_the_rows_through_every_filter(world):
+def test_ledger(world):
     (line,) = judge(world).ledger
     # nine first-installment rows in March; two outside the generated statuses (106, and the
     # re-write of 109); one excluded agent (105); one older write of 108
@@ -86,12 +86,12 @@ def test_the_ledger_follows_the_rows_through_every_filter(world):
     assert line.slips_value == 855.0 and line.unknown_agent == 0
 
 
-def test_the_same_build_gives_the_same_record(world, tmp_path):
+def test_record_is_deterministic(world, tmp_path):
     other = make_world(tmp_path / "again.db")
     assert judge(world).record() == judge(other).record()
 
 
-def test_two_product_lines_that_reuse_ids_are_admitted(two_lines):
+def test_two_lines(two_lines):
     admission = admit(
         two_lines,
         SETTINGS,
@@ -104,7 +104,7 @@ def test_two_product_lines_that_reuse_ids_are_admitted(two_lines):
     assert [x.product_line for x in admission.ledger] == ["auto", "consumer"]
 
 
-def test_the_demo_databases_are_admitted(demo_dir):
+def test_demo_databases(demo_dir):
     databases = {
         "auto": SQLiteDatabase.open(demo_dir / "auto.db"),
         "consumer": SQLiteDatabase.open(demo_dir / "consumer.db"),
@@ -231,14 +231,15 @@ ONE_RULE = [
 
 
 @pytest.mark.parametrize(("what", "sql", "rules"), ONE_RULE, ids=[c[0] for c in ONE_RULE])
-def test_data_that_breaks_a_rule_does_not_enter(world, what, sql, rules):
+def test_rule_rejects(world, what, sql, rules):
     damage(world, sql)
     admission = judge(world)
     assert not admission.passed and admission.dataset is None, what
     assert failed_ids(admission) == rules, what
 
 
-def test_a_duplicate_key_in_a_reference_table_multiplies_slips_and_is_caught_twice(world):
+def test_duplicate_debtor(world):
+    # A repeated debtor id doubles every slip that joins to it.
     twin = without_key("debtors", DEBTORS, extra="INSERT INTO debtors_copy VALUES (2, 'x');")
     damage(world, twin)
     admission = judge(world)
@@ -248,7 +249,7 @@ def test_a_duplicate_key_in_a_reference_table_multiplies_slips_and_is_caught_twi
     assert "debtor rows that repeat a debtor id: 1" in grain.detail
 
 
-def test_a_duplicate_status_row_multiplies_slips_too(world):
+def test_duplicate_status(world):
     extra = (
         "INSERT INTO agreement_statuses_copy "
         "SELECT * FROM agreement_statuses WHERE label = 'ACTIVE';"
@@ -257,14 +258,14 @@ def test_a_duplicate_status_row_multiplies_slips_too(world):
     assert {"key.grain", "recon.slips"} <= failed_ids(judge(world))
 
 
-def test_the_report_of_a_failure_counts_rows_and_names_columns(world):
+def test_failure_detail(world):
     damage(world, "UPDATE agreements SET agent_id = NULL WHERE row_id IN (1, 2)")
     rule = by_id(judge(world))["row.required"]
     assert rule.violations == 2 and rule.checked > 5
     assert rule.detail == ("slips.agent_id: 2 row(s)",)
 
 
-def test_a_failing_source_stops_the_build_before_anything_is_extracted(world):
+def test_source_failure(world):
     damage(world, "DROP TABLE debtors")
     admission = judge(world)
     results = by_id(admission)
@@ -275,7 +276,8 @@ def test_a_failing_source_stops_the_build_before_anything_is_extracted(world):
     assert admission.queries == [], "no query ran against a database that failed the source rules"
 
 
-def test_bad_rows_hold_back_the_comparisons_that_would_only_repeat_the_problem(world):
+def test_bad_rows_skip_recon(world):
+    # With rows left out every count would differ; reporting that repeats the problem.
     damage(world, "UPDATE agreements SET agent_id = NULL WHERE row_id = 1")
     results = by_id(judge(world))
     assert results["row.required"].status == FAIL
@@ -286,7 +288,7 @@ def test_bad_rows_hold_back_the_comparisons_that_would_only_repeat_the_problem(w
         assert "left out at intake" in results[rule_id].detail[0]
 
 
-def test_every_failure_is_reported_not_just_the_first(world):
+def test_all_failures_listed(world):
     damage(
         world,
         "UPDATE agreements SET paid_amount = 0 WHERE row_id = 1",
@@ -299,7 +301,7 @@ def test_every_failure_is_reported_not_just_the_first(world):
 # ---- the pure rules ------------------------------------------------------------------------
 
 
-def test_grain_allows_the_same_ids_in_two_product_lines():
+def test_grain_per_line():
     from frames import dataset
 
     ds = dataset(
@@ -312,7 +314,7 @@ def test_grain_allows_the_same_ids_in_two_product_lines():
     assert check_grain(ds).status == PASS
 
 
-def test_grain_counts_each_kind_of_repeat():
+def test_grain_repeats():
     from frames import dataset
 
     ds = dataset([raw(1), raw(1), raw(2, record_id=1)])
@@ -338,7 +340,7 @@ def test_grain_counts_each_kind_of_repeat():
         ({"due_date": "2025-12-31"}, "a due date outside the requested window"),
     ],
 )
-def test_domain_flags_a_slip_outside_what_the_build_asked_for(change, flaw):
+def test_domain_flaws(change, flaw):
     from frames import dataset
 
     ds = dataset([raw(1)])
@@ -348,7 +350,7 @@ def test_domain_flags_a_slip_outside_what_the_build_asked_for(change, flaw):
     assert result.detail == (f"slips with {flaw}: 1",)
 
 
-def test_domain_ignores_padding_in_a_status_label_and_the_ends_of_the_window():
+def test_domain_edges():
     from frames import dataset
 
     ds = dataset([raw(1, status_label="ACTIVE "), raw(2, due_date="2026-01-01")])
@@ -380,12 +382,12 @@ def compared(world):
         db.close()
 
 
-def test_the_second_route_agrees_with_an_untouched_extraction(compared):
+def test_recon_agrees(compared):
     _, run = compared
     assert {r.status for r in run().values()} == {PASS}
 
 
-def test_a_missing_slip_is_a_count_difference(compared):
+def test_recon_missing_slip(compared):
     ds, run = compared
     ds.base.pop()
     results = run()
@@ -393,7 +395,7 @@ def test_a_missing_slip_is_a_count_difference(compared):
     assert results["recon.value"].status == FAIL
 
 
-def test_a_slip_in_the_wrong_bucket_is_an_outcome_difference(compared):
+def test_recon_bucket(compared):
     ds, run = compared
     row = next(r for r in ds.base if r["bucket"] == "overdue_unpaid")
     row["bucket"] = "paid_on_time"
@@ -402,7 +404,7 @@ def test_a_slip_in_the_wrong_bucket_is_an_outcome_difference(compared):
     assert results["recon.outcome"].violations == 2
 
 
-def test_a_changed_amount_is_a_value_difference(compared):
+def test_recon_amount(compared):
     ds, run = compared
     ds.base[0]["first_installment_value"] += 5
     results = run()
@@ -410,31 +412,32 @@ def test_a_changed_amount_is_a_value_difference(compared):
     assert "first-installment value" in results["recon.value"].detail[0]
 
 
-def test_a_changed_agreement_total_is_a_value_difference(compared):
+def test_recon_agreement_total(compared):
     ds, run = compared
     ds.base[0]["total_value"] += 5
     assert "whole-agreement value" in run()["recon.value"].detail[0]
 
 
-def test_a_changed_installment_count_is_a_value_difference(compared):
+def test_recon_installments(compared):
     ds, run = compared
     ds.base[0]["total_installments"] += 1
     assert "installments" in run()["recon.value"].detail[0]
 
 
-def test_less_than_a_cent_is_not_a_difference(compared):
+def test_recon_cent_tolerance(compared):
+    # SQL and Python add money in a different order, so sub-cent noise is not a difference.
     ds, run = compared
     ds.base[0]["first_installment_value"] += 0.004
     assert run()["recon.value"].status == PASS
 
 
-def test_a_lost_contact_event_is_a_history_difference(compared):
+def test_recon_lost_contact(compared):
     ds, run = compared
     ds.contacts.pop()
     assert failed_ids_of(run()) == {"recon.history"}
 
 
-def test_a_lost_earlier_break_is_a_history_difference(compared):
+def test_recon_lost_break(compared):
     ds, run = compared
     ds.breaks.pop()
     results = run()
@@ -449,14 +452,14 @@ def failed_ids_of(results) -> set[str]:
 # ---- the report ----------------------------------------------------------------------------
 
 
-def test_an_admitted_report_says_where_the_dataset_went(world, tmp_path):
+def test_report_admitted(world, tmp_path):
     text = render(judge(world), dataset_path=tmp_path / "d.json", previous_file_kept=False).render()
     assert "**Result: ADMITTED.**" in text and "All 15 entry rules passed" in text
     assert "## Filter ledger" in text and "## Queries run" in text
     assert "What to fix" not in text
 
 
-def test_a_rejected_report_says_what_to_fix_and_that_nothing_was_written(world, tmp_path):
+def test_report_rejected(world, tmp_path):
     damage(world, "UPDATE agreements SET paid_amount = 0 WHERE row_id = 1")
     admission = judge(world)
     path = tmp_path / "d.json"
@@ -470,7 +473,7 @@ def test_a_rejected_report_says_what_to_fix_and_that_nothing_was_written(world, 
     assert f"The file at `{path}` was left as it was" in kept
 
 
-def test_the_report_holds_counts_only_never_a_key_an_id_or_a_value(world, tmp_path):
+def test_report_has_no_row_values(world, tmp_path):
     damage(world, "UPDATE agreements SET paid_amount = 0 WHERE row_id = 1")
     text = render(judge(world), dataset_path=tmp_path / "d.json", previous_file_kept=False).render()
     for secret in ("pk_alpha", "pk_beta", "agent_01", "Agent 01", "Portfolio A-01", "a1"):
