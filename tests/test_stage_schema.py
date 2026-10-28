@@ -11,6 +11,7 @@ from delinquency_eda.db.base import ColumnInfo
 from delinquency_eda.stages.s01_schema import check_database, check_table, configured_labels, render
 
 from clirun import run_cli, sqlite_args
+from world import damage
 
 
 def test_check_table_reports_missing_required_missing_optional_and_extra():
@@ -104,3 +105,62 @@ def test_cli_exits_zero_when_ready_and_one_when_not(world, tmp_path):
     code, out = run_cli(*sqlite_args(("auto", world)), "--out-dir", out_dir, "schema")
     assert code == 1
     assert "contact_results: missing" in out
+
+
+# ---- declared types ------------------------------------------------------------------------
+
+
+def test_a_declared_type_outside_the_contract_family_is_reported():
+    spec = TableSpec("agreements", required=("amount", "due_at", "agent_id"))
+    columns = [
+        ColumnInfo("amount", "varchar(20)", False),
+        ColumnInfo("due_at", "int", False),
+        ColumnInfo("agent_id", "varchar(10)", False),
+    ]
+    check = check_table(spec, columns)
+    assert [(m.column, m.found, m.kind) for m in check.wrong_types] == [
+        ("amount", "varchar(20)", "number"),
+        ("due_at", "int", "date"),
+    ]
+    assert check.structure_ok and not check.ok
+
+
+def test_types_of_optional_and_unknown_columns_are_not_judged():
+    spec = TableSpec("debts", required=("debt_id", "balance"), optional=("due_at",))
+    columns = [
+        ColumnInfo("debt_id", "int", False),
+        ColumnInfo("balance", "decimal(12,2)", True),
+        ColumnInfo("due_at", "xml", True),
+        ColumnInfo("note", "varbinary(4)", True),
+    ]
+    assert check_table(spec, columns).ok
+
+
+def test_the_test_world_has_no_type_outside_the_contract(world):
+    with SQLiteDatabase.open(world) as db:
+        line = check_database(db, "auto", Settings())
+    assert [m for t in line.tables for m in t.wrong_types] == []
+
+
+def test_a_wrong_type_makes_the_database_not_ready_and_the_command_exit_one(world, tmp_path):
+    damage(
+        world,
+        "CREATE TABLE d2 (debtor_id TEXT, person_key INTEGER);"
+        "INSERT INTO d2 SELECT * FROM debtors; DROP TABLE debtors;"
+        "ALTER TABLE d2 RENAME TO debtors;",
+    )
+    with SQLiteDatabase.open(world) as db:
+        line = check_database(db, "auto", Settings())
+    assert line.ready("slips") and not line.ready("base")  # debtors is a base-only table
+    code, out = run_cli(*sqlite_args(("auto", world)), "--out-dir", str(tmp_path / "r"), "schema")
+    assert code == 1
+    assert "debtors.debtor_id: declared 'text', the contract needs integer" in out
+    assert "debtors.person_key: declared 'integer', the contract needs text" in out
+    report = (tmp_path / "r" / "schema.md").read_text(encoding="utf-8")
+    assert "| WRONG |" in report and "| wrong type |" in report
+
+
+def test_the_report_names_the_kind_each_column_must_have(world):
+    with SQLiteDatabase.open(world) as db:
+        text = render([check_database(db, "auto", Settings())]).render()
+    assert "| agreements | due_at | text | yes | date | ok |" in text

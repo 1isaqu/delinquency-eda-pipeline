@@ -15,6 +15,19 @@ from delinquency_eda.dataset import Dataset, DatasetMeta, normalize_slip
 AS_OF = date(2026, 3, 31)
 GRACE = 3
 
+# A dataset is only written with an admission record, and only the ``base`` stage earns a real
+# one. The offline stages are tested on rows built by hand (some deliberately dirty, to give the
+# diagnostics something to find), so those datasets carry this record. It says so in the file.
+FIXTURE_ADMISSION: dict[str, Any] = {
+    "contract_version": 1,
+    "package_version": "fixture",
+    "passed": True,
+    "rules": [],
+    "ledger": [],
+    "queries": [],
+    "note": "hand-built test fixture, not judged against the entry contract",
+}
+
 
 def raw(i: int = 1, **overrides: Any) -> dict[str, Any]:
     """One raw slip. Defaults: unpaid, due 2026-03-10, a 100.00 slip on a 500.00 debt."""
@@ -77,6 +90,7 @@ def dataset(
         debtors=[dict(d) for d in debtors],
         contacts=[dict(c) for c in contacts],
         breaks=[dict(b) for b in breaks],
+        admission=dict(FIXTURE_ADMISSION),
     )
 
 

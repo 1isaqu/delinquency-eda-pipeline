@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import inspect
+import json
 import os
 import subprocess
 import sys
@@ -188,3 +189,28 @@ def test_a_single_slip_dataset_goes_through_the_descriptive_stages(tmp_path):
     for stage_args in (["analysis"], ["censoring"], ["eda"], ["diagnose"], ["clean"]):
         code, _ = run_cli(*stage_args, "--dataset", str(path), "--out-dir", str(tmp_path / "r"))
         assert code == 0, stage_args
+
+
+@pytest.mark.parametrize("stage_args", OFFLINE, ids=lambda a: a[0])
+def test_every_offline_stage_refuses_a_dataset_edited_after_it_was_written(
+    stage_args, tmp_path, capsys
+):
+    path = dataset([raw(1), paid_on_time(2)]).save(tmp_path / "ds.json")
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    payload["base"][0]["first_installment_value"] = 1.0
+    path.write_text(json.dumps(payload), encoding="utf-8")
+    code, _ = run_cli(*stage_args, "--dataset", str(path), "--out-dir", str(tmp_path / "r"))
+    assert code == 2
+    err = capsys.readouterr().err
+    assert "does not match its seal" in err and "rebuild it with the base command" in err
+    assert not (tmp_path / "r").exists(), "a refused dataset produces no report"
+
+
+def test_a_dataset_from_before_the_contract_is_refused_with_the_way_out(tmp_path, capsys):
+    path = dataset([raw(1)]).save(tmp_path / "ds.json")
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    payload["meta"]["schema_version"] = 1
+    path.write_text(json.dumps(payload), encoding="utf-8")
+    code, _ = run_cli("analysis", "--dataset", str(path), "--out-dir", str(tmp_path / "r"))
+    assert code == 2
+    assert "rebuild it with the base command" in capsys.readouterr().err

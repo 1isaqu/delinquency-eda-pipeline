@@ -11,6 +11,11 @@ stages 03 to 08 and 10 read, so those run offline and repeatably. The bundle has
 The outcome is derived in Python against the ``--as-of`` date (today's local date when the flag
 is left out), never the database server's clock, so the same command with the same date always
 gives the same dataset, and a later stage can replay the past by re-deriving at an earlier date.
+
+This stage is also the gate. The build is judged against the entry contract (``contract.RULES``,
+judged by ``admission.py``) and the dataset file is written only if every rule passes. A build that
+fails writes ``admission.md`` and no dataset, prints why, and exits 1. The file already at the
+dataset path, if any, is left untouched: it holds an earlier build that was admitted.
 """
 
 from __future__ import annotations
@@ -20,11 +25,15 @@ from collections import Counter
 from dataclasses import dataclass
 from datetime import date
 
+from delinquency_eda.admission import PASS, SKIPPED, admit
+from delinquency_eda.admission import render as render_admission
 from delinquency_eda.context import Context
-from delinquency_eda.dataset import Dataset, build_dataset
+from delinquency_eda.dataset import Dataset
 from delinquency_eda.dates import date_argument
 from delinquency_eda.derive import BUCKETS
+from delinquency_eda.errors import DatasetError
 from delinquency_eda.report import Doc, fmt_money
+from delinquency_eda.stages.s01_schema import check_database
 
 
 @dataclass(frozen=True)
@@ -60,17 +69,20 @@ def summarize(dataset: Dataset) -> BaseSummary:
 def render(dataset: Dataset, summary: BaseSummary) -> Doc:
     meta = dataset.meta
     doc = Doc().h1("Base build")
-    doc.table(
-        [
-            ["due-date window", f"{meta.period_from} to {meta.period_to}"],
-            ["reference date (as of)", meta.as_of],
-            ["grace days", meta.grace_days],
-            ["product lines", ", ".join(meta.product_lines)],
-            ["generated statuses", ", ".join(meta.generated_status_labels)],
-            ["excluded agent patterns", ", ".join(meta.excluded_agent_patterns) or "(none)"],
-        ],
-        ["parameter", "value"],
-    )
+    parameters = [
+        ["due-date window", f"{meta.period_from} to {meta.period_to}"],
+        ["reference date (as of)", meta.as_of],
+        ["grace days", meta.grace_days],
+        ["product lines", ", ".join(meta.product_lines)],
+        ["generated statuses", ", ".join(meta.generated_status_labels)],
+        ["excluded agent patterns", ", ".join(meta.excluded_agent_patterns) or "(none)"],
+    ]
+    rules = (dataset.admission or {}).get("rules", [])
+    if rules:
+        passed = sum(1 for r in rules if r["status"] == PASS)
+        verdict = f"{passed} of {len(rules)} rules passed (admission.md)"
+        parameters.append(["entry contract", verdict])
+    doc.table(parameters, ["parameter", "value"])
     doc.h2("Contents")
     doc.table(
         [
@@ -114,15 +126,46 @@ def add_arguments(parser: argparse.ArgumentParser) -> None:
 
 
 def run(ctx: Context, args: argparse.Namespace) -> int:
+    if args.date_to < args.date_from:
+        raise DatasetError("the period end is before its start")
     as_of = args.as_of or date.today()
     with ctx.databases() as databases:
-        dataset = build_dataset(
-            databases, ctx.settings, date_from=args.date_from, date_to=args.date_to, as_of=as_of
+        schema = {name: check_database(db, name, ctx.settings) for name, db in databases.items()}
+        admission = admit(
+            databases,
+            ctx.settings,
+            schema,
+            date_from=args.date_from,
+            date_to=args.date_to,
+            as_of=as_of,
         )
+    kept = ctx.dataset_path.exists()
+    dataset = admission.dataset
+    if dataset is None:
+        ctx.write_report(
+            "admission.md",
+            render_admission(admission, dataset_path=ctx.dataset_path, previous_file_kept=kept),
+        )
+        ctx.say(f"rejected: {len(admission.failed)} entry rule(s) failed; no dataset was written")
+        for result in admission.failed:
+            ctx.say(f"  {result.id}: {result.violations} violation(s)")
+            for line in result.detail:
+                ctx.say(f"    {line}")
+        held_back = [r.id for r in admission.results if r.status == SKIPPED]
+        if held_back:
+            ctx.say(f"  not judged, because an earlier rule failed: {', '.join(held_back)}")
+        if kept:
+            ctx.say(f"  the file at {ctx.dataset_path} was left as it was")
+        return 1
     summary = summarize(dataset)
     dataset.save(ctx.dataset_path)
     ctx.say(f"dataset written: {ctx.dataset_path} ({summary.slips} slips)")
+    ctx.say(f"  entry contract: all {len(admission.results)} rules passed")
     for bucket, n in summary.by_bucket.items():
         ctx.say(f"  {bucket}: {n}")
     ctx.write_report("base.md", render(dataset, summary))
+    ctx.write_report(
+        "admission.md",
+        render_admission(admission, dataset_path=ctx.dataset_path, previous_file_kept=kept),
+    )
     return 0

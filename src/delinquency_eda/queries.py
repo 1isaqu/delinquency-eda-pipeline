@@ -246,3 +246,203 @@ def build_status_query(dialect: Dialect, schema: str | None = None) -> Query:
         "ORDER BY s.status_id"
     )
     return Query(sql, ())
+
+
+# --------------------------------------------------------------------------------------------
+# Admission: a second, independent route to the numbers the extraction produced
+# --------------------------------------------------------------------------------------------
+#
+# These queries answer the same questions as the extraction by a different route, so that a
+# disagreement means something is wrong with the data or with the extraction. They avoid what the
+# extraction uses: no ROW_NUMBER (the latest row is the one with no newer row), no LEFT JOIN to a
+# reference table (a lookup is an EXISTS, so a duplicate key cannot multiply a row), and the
+# outcome rule is written again in SQL. Where the two routes differ, the cause is nearly always a
+# duplicate key in a reference table, a status or agent that the join resolves twice, or a date
+# the two rules read differently.
+
+
+def _newer(alias: str, other: str) -> str:
+    """``other`` is a later write of the same installment than ``alias``."""
+    return (
+        f"({other}.issued_at > {alias}.issued_at "
+        f"OR ({other}.issued_at = {alias}.issued_at AND {other}.row_id > {alias}.row_id))"
+    )
+
+
+def build_reconcile_slips_query(
+    dialect: Dialect,
+    settings: Settings,
+    date_from: date,
+    date_to: date,
+    as_of: date,
+    schema: str | None = None,
+) -> Query:
+    """Counts and sums of the slips by the independent route, one row per measurement.
+
+    Columns: ``kind``, ``name``, ``n`` (rows) and ``total`` (sum of the first-installment amount).
+
+    * ``funnel``: rows left after each filter, in the order the extraction applies them
+      (``window``, ``status``, ``agents``) and the slips left once re-writes collapse
+      (``latest``),
+    * ``bucket``: the slips in each outcome bucket, derived in SQL against ``as_of``,
+    * ``debtor_orphans`` / ``unknown_agent``: slips whose debtor or agent has no row,
+    * ``agreement``: the latest row of every installment of the agreements that have a slip,
+      which is what the whole-agreement value sums,
+    * ``first_installments`` / ``unreadable_due``: every first-installment row of the table, and
+      those whose due date is NULL or does not read as a date. The window filter cannot see such
+      a row, so it would drop out of every window without a trace.
+
+    Parameters, in order: lower due bound, upper (exclusive) due bound, one per generated status
+    label, two per excluded agent pattern (login, display name), then the reference date twice.
+    """
+    t = dialect.table
+    day = dialect.day
+    labels = placeholders(len(settings.generated_status_labels))
+    params: list = [
+        dialect.bind_date(date_from),
+        dialect.bind_date(next_day(date_to)),
+        *settings.generated_status_labels,
+    ]
+
+    agent_tests: list[str] = []
+    agent_params: list[str] = []
+    for pattern in settings.excluded_agent_patterns:
+        for column in ("login", "display_name"):
+            agent_tests.append(f"COALESCE(LOWER(LTRIM(RTRIM(u.{column}))), '') LIKE ?")
+            agent_params.append(pattern.lower())
+    agent_filter = ""
+    if agent_tests:
+        agent_filter = (
+            "\n    AND NOT EXISTS (\n"
+            f"        SELECT 1 FROM {t('agents', 'u', schema)}\n"
+            f"        WHERE u.agent_id = w.agent_id AND ({' OR '.join(agent_tests)}))"
+        )
+    params += agent_params
+
+    on_time = (
+        f"l.paid_amount > 0 AND {day('l.paid_at')} <= ? "
+        f"AND {day('l.paid_at')} <= {dialect.plus_days(day('l.due_at'), settings.grace_days)}"
+    )
+    params += [dialect.bind_date(as_of), dialect.bind_date(as_of)]
+
+    sql = f"""WITH windowed AS (
+    SELECT w.row_id, w.agreement_id, w.portfolio_id, w.debtor_id, w.status_id, w.agent_id,
+           w.amount, w.issued_at, w.due_at, w.paid_amount, w.paid_at
+    FROM {t("agreements", "w", schema)}
+    WHERE w.installment_no = 0 AND w.due_at >= ? AND w.due_at < ?
+),
+in_scope AS (
+    SELECT * FROM windowed AS w
+    WHERE EXISTS (
+        SELECT 1 FROM {t("agreement_statuses", "g", schema)}
+        WHERE g.status_id = w.status_id AND g.label IN ({labels}))
+),
+kept AS (
+    SELECT * FROM in_scope AS w
+    WHERE 1 = 1{agent_filter}
+),
+latest AS (
+    SELECT k.* FROM kept AS k
+    WHERE NOT EXISTS (
+        SELECT 1 FROM kept AS o
+        WHERE o.agreement_id = k.agreement_id AND o.portfolio_id = k.portfolio_id
+          AND {_newer("k", "o")})
+),
+classified AS (
+    SELECT l.*,
+           CASE WHEN {on_time} THEN 'paid_on_time'
+                WHEN {day("l.due_at")} < ? THEN 'overdue_unpaid'
+                ELSE 'to_mature' END AS bucket
+    FROM latest AS l
+)
+SELECT 'funnel' AS kind, 'window' AS name, COUNT(*) AS n, SUM(amount) AS total FROM windowed
+UNION ALL SELECT 'funnel', 'status', COUNT(*), SUM(amount) FROM in_scope
+UNION ALL SELECT 'funnel', 'agents', COUNT(*), SUM(amount) FROM kept
+UNION ALL SELECT 'funnel', 'latest', COUNT(*), SUM(amount) FROM latest
+UNION ALL SELECT 'bucket', bucket, COUNT(*), SUM(amount) FROM classified GROUP BY bucket
+UNION ALL SELECT 'debtor_orphans', 'debtors', COUNT(*), SUM(l.amount)
+    FROM latest AS l
+    WHERE NOT EXISTS (
+        SELECT 1 FROM {t("debtors", "d", schema)} WHERE d.debtor_id = l.debtor_id)
+UNION ALL SELECT 'unknown_agent', 'agents', COUNT(*), SUM(l.amount)
+    FROM latest AS l
+    WHERE NOT EXISTS (
+        SELECT 1 FROM {t("agents", "a", schema)} WHERE a.agent_id = l.agent_id)
+UNION ALL SELECT 'first_installments', 'agreements', COUNT(*), SUM(z.amount)
+    FROM {t("agreements", "z", schema)}
+    WHERE z.installment_no = 0
+UNION ALL SELECT 'unreadable_due', 'agreements', COUNT(*), SUM(z.amount)
+    FROM {t("agreements", "z", schema)}
+    WHERE z.installment_no = 0 AND {dialect.unreadable_day("z.due_at")}
+UNION ALL SELECT 'agreement', 'installments', COUNT(*), SUM(x.amount)
+    FROM {t("agreements", "x", schema)}
+    WHERE EXISTS (
+        SELECT 1 FROM latest AS l
+        WHERE l.agreement_id = x.agreement_id AND l.portfolio_id = x.portfolio_id)
+      AND NOT EXISTS (
+        SELECT 1 FROM {t("agreements", "y", schema)}
+        WHERE y.agreement_id = x.agreement_id AND y.portfolio_id = x.portfolio_id
+          AND y.installment_no = x.installment_no AND {_newer("x", "y")})"""
+    return Query(sql, tuple(params))
+
+
+def build_reconcile_contacts_query(
+    dialect: Dialect,
+    debtor_ids: Sequence,
+    date_from: date,
+    date_to: date,
+    schema: str | None = None,
+) -> Query:
+    """Outreach events of ``debtor_ids`` in the window, and how many have no result in the catalog.
+
+    Columns: ``name`` (``events`` or ``without_result``) and ``n``. The extraction joins the
+    catalog, so an event without a result would vanish; this counts them instead.
+
+    Parameters, in order, twice over: lower bound, upper (exclusive) bound, then the debtor ids.
+    """
+    t = dialect.table
+    ids = placeholders(len(debtor_ids))
+    window = "e.occurred_at >= ? AND e.occurred_at < ?"
+    sql = (
+        "SELECT 'events' AS name, COUNT(*) AS n\n"
+        f"FROM {t('contact_events', 'e', schema)}\n"
+        f"WHERE {window} AND e.debtor_id IN ({ids})\n"
+        "UNION ALL\n"
+        "SELECT 'without_result', COUNT(*)\n"
+        f"FROM {t('contact_events', 'e', schema)}\n"
+        f"WHERE {window} AND e.debtor_id IN ({ids})\n"
+        "  AND NOT EXISTS (\n"
+        f"      SELECT 1 FROM {t('contact_results', 'c', schema)} WHERE c.result_id = e.result_id)"
+    )
+    bounds = (dialect.bind_date(date_from), dialect.bind_date(next_day(date_to)))
+    return Query(sql, (*bounds, *debtor_ids, *bounds, *debtor_ids))
+
+
+def build_reconcile_breaks_query(
+    dialect: Dialect,
+    settings: Settings,
+    debtor_ids: Sequence,
+    schema: str | None = None,
+) -> Query:
+    """Earlier broken first-installment agreements of ``debtor_ids``, counted without a join.
+
+    Column: ``n``. Parameters, in order: one per broken status label, then the debtor ids.
+    """
+    t = dialect.table
+    labels = placeholders(len(settings.broken_status_labels))
+    sql = f"""WITH broken AS (
+    SELECT r.row_id, r.agreement_id, r.portfolio_id, r.issued_at
+    FROM {t("agreements", "r", schema)}
+    WHERE r.installment_no = 0
+      AND EXISTS (
+          SELECT 1 FROM {t("agreement_statuses", "g", schema)}
+          WHERE g.status_id = r.status_id AND g.label IN ({labels}))
+      AND r.debtor_id IN ({placeholders(len(debtor_ids))})
+)
+SELECT COUNT(*) AS n
+FROM broken AS b
+WHERE NOT EXISTS (
+    SELECT 1 FROM broken AS o
+    WHERE o.agreement_id = b.agreement_id AND o.portfolio_id = b.portfolio_id
+      AND {_newer("b", "o")})"""
+    return Query(sql, (*settings.broken_status_labels, *debtor_ids))

@@ -164,3 +164,25 @@ def make_second_line(path: Path) -> Path:
     connection.commit()
     connection.close()
     return path
+
+
+def damage(path: Path, *statements: str) -> Path:
+    """Run SQL that breaks the database in one chosen way. The tests then check which rule
+    notices. Each statement may hold several commands."""
+    connection = sqlite3.connect(path)
+    for statement in statements:
+        connection.executescript(statement)
+    connection.commit()
+    connection.close()
+    return path
+
+
+def without_key(table: str, columns: str, *, extra: str = "") -> str:
+    """SQL that rebuilds ``table`` with no key, so a duplicate row can be inserted. ``columns`` is
+    the column list with types and ``extra`` holds the INSERT of the duplicate."""
+    return (
+        f"CREATE TABLE {table}_copy ({columns});"
+        f"INSERT INTO {table}_copy SELECT * FROM {table};"
+        f"{extra}"
+        f"DROP TABLE {table}; ALTER TABLE {table}_copy RENAME TO {table};"
+    )
