@@ -44,3 +44,17 @@ jobs:
           delinquency-eda clean
           delinquency-eda card --from-dataset
           delinquency-eda model
+      - name: A database that breaks the entry contract is refused
+        env:
+          DEA_BACKEND: sqlite
+          DEA_CONFIG: examples/settings.example.json
+        run: |
+          cp data/demo/auto.db data/demo/broken.db
+          python -c "import sqlite3; c = sqlite3.connect('data/demo/broken.db'); c.execute('UPDATE agreements SET paid_amount = 0 WHERE paid_amount > 0'); c.commit()"
+          set +e
+          delinquency-eda --source auto=data/demo/broken.db --dataset data/broken.json --out-dir reports/broken base --from 2025-11-01 --to 2026-03-31 --as-of 2026-03-31
+          code=$?
+          set -e
+          test "$code" -eq 1
+          test ! -e data/broken.json
+          grep -q "Result: REJECTED" reports/broken/admission.md

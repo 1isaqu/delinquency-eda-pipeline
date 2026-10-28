@@ -22,6 +22,11 @@ Terms and field names used in the code, reports and settings.
 | Follow-up | Outreach attempts after the agreement day and up to the due date. The agreement day itself is the negotiation, not a reminder. |
 | Repeat debtor | A person with at least one earlier first-installment agreement that ended broken. |
 | Grace period | `grace_days` after the due date within which a payment still counts as on time. |
+| Entry contract | The rules a build must satisfy before its dataset is written (`docs/data-contract.md`). Data that breaks one does not enter. |
+| Admission | The verdict of the entry contract on one build, and the record of it stored in the dataset file. |
+| Second route | The independent queries that recompute the extraction's counts and sums for the reconciliation rules. |
+| Filter ledger | Where the first-installment rows of the window went before they became slips: outside the generated statuses, excluded agents, older writes. |
+| Seal | A SHA-256 of the dataset file's content and the row count of each table. A file that no longer matches it is refused. |
 
 ## Outcome
 
